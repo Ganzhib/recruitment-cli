@@ -1,3 +1,4 @@
+import './prepare-site.mjs';
 import { cp, mkdir, rm } from 'node:fs/promises';
 import { extname } from 'node:path';
 

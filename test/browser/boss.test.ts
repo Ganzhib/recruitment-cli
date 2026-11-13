@@ -96,3 +96,19 @@ test('native greeting ignores successful responses for other targets', async () 
   );
   assert.equal(events.listenerCount('response'), 0);
 });
+
+test('BOSS login follows a new authenticated tab when the original login page closes', async () => {
+  const { waitForBossLogin } = await import('../../src/platform/boss/session.js');
+  const { fixtureBrowser } = await import('./fixtures.js');
+  const browser = fixtureBrowser(async (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<main>fabricated login</main>' }),
+  );
+  await browser('', async (context, original) => {
+    await original.goto('https://www.zhipin.com/web/user/');
+    const waiting = waitForBossLogin(context, 5000);
+    const authenticated = await context.newPage();
+    await authenticated.goto('https://www.zhipin.com/web/geek/job');
+    await original.close();
+    assert.equal(await waiting, authenticated);
+  });
+});

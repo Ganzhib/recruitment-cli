@@ -1,4 +1,4 @@
-import type { Page } from 'playwright';
+import type { BrowserContext, Page } from 'playwright';
 import { z } from 'zod';
 import type { AccountProfile, Role } from '../../core/schemas.js';
 import { RecruitmentError } from '../../shared/errors.js';
@@ -93,4 +93,36 @@ export async function listPositions(session: BossSession) {
     location: job.address ?? '',
     salary: job.salaryDesc ?? '',
   }));
+}
+
+export async function waitForBossLogin(
+  context: BrowserContext,
+  timeoutMs = 180_000,
+): Promise<Page> {
+  const deadline = Date.now() + timeoutMs;
+  let closed = false;
+  const onClose = () => {
+    closed = true;
+  };
+  context.on('close', onClose);
+  try {
+    while (Date.now() < deadline) {
+      if (closed)
+        throw new RecruitmentError(
+          'AUTH',
+          '登录浏览器已关闭，扫码尚未完成。请重新打开登录窗口并保持到身份确认完成。',
+        );
+      const page = context
+        .pages()
+        .find((candidate) => !candidate.isClosed() && roleFromUrl(candidate.url()));
+      if (page) return page;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    throw new RecruitmentError(
+      'AUTH',
+      '等待 BOSS 登录超时。请在 BOSS 页面扫码并进入求职端或招聘端主页；若平台要求验证，请先完成验证。',
+    );
+  } finally {
+    context.off('close', onClose);
+  }
 }

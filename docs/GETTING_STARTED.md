@@ -4,17 +4,15 @@ recruitment-cli 是安装在电脑或业务运行环境中的工具。官网帮�
 
 ## 1. 业务系统接入
 
-适合自有招聘系统、内部工具、对话界面和自动化流程。仓库中的 `site/demo/demo.ts` 就是一个业务接入实例：它通过包根入口复用 client，把模型调用和工具事件接到自己的页面。
+适合自有招聘系统、内部工具、对话界面和自动化流程。内置的 `recruit demo` 就是一个业务接入实例：它复用 client，把模型调用和工具事件接到自己的页面。
 
-当前是源码预览版，先在源码目录构建并打包：
+在业务项目里安装：
 
 ```bash
-npm ci
-npm run build
-npm pack
+npm install @ganzhibin/recruitment-cli
 ```
 
-在业务项目里安装生成的 `.tgz` 文件，再从包根导入：
+从包根导入：
 
 ```typescript
 import { createRecruitmentClient } from '@ganzhibin/recruitment-cli';
@@ -40,7 +38,7 @@ const result = await recruit.search(
 
 **有本机终端能力：**让助手读取仓库说明、安装和构建，再使用 `recruit` 命令。可以复制以下提示词：
 
-> 请帮我安装并配置 recruitment-cli（求职与招聘助手，命令为 recruit）。先读取 https://github.com/Ganzhib/recruitment-cli 的当前说明；当前为源码预览版，按说明获取源码，检查 Node.js 22.16+ 与 Chrome/Chromium，安装依赖并构建，使用 --help 和 schema 核对命令。引导我扫码登录，自动识别当前账号与求职者或招聘者身份。再按我给出的岗位、城市和近期活跃要求整理结果。这次只安装、登录和读取，先不发招呼。不要索取或展示账号凭据。
+> 请帮我安装并配置 recruitment-cli（求职与招聘助手，命令为 recruit）。先读取 https://github.com/Ganzhib/recruitment-cli 的当前说明；检查 Node.js 22.16+ 与 Chrome/Chromium，运行 npm install -g @ganzhibin/recruitment-cli@latest，使用 recruit --help 和 recruit schema 核对命令，运行 recruit demo 在本地页面连接模型 API Key。引导我扫码登录，自动识别当前账号与求职者或招聘者身份。再按我给出的岗位、城市和近期活跃要求整理结果。这次只安装、登录和读取，先不发招呼。不要索取或展示账号凭据。
 
 **有工具调用接口：**把 `createRecruitmentTools(client).functions()` 注册到你的工具调用链，或通过 `GET /api/tools` 发现工具，再调用 `POST /api/tools/execute`。实际沟通权限由使用者提供，不由模型参数授予。
 
@@ -52,18 +50,17 @@ const result = await recruit.search(
 
 ## 3. 命令行爱好者
 
-在源码目录运行：
+在终端运行：
 
 ```bash
-npm ci
-npm run build
+npm install -g @ganzhibin/recruitment-cli@latest
 
-node dist/recruit.js --help
-node dist/recruit.js auth login boss
-node dist/recruit.js auth status boss
+recruit --help
+recruit auth login boss
+recruit auth status boss
 
-node dist/recruit.js search "前端" --platform boss --city 上海 --active-within 7d -n 5
-node dist/recruit.js greet "前端" --platform boss --active-within 7d --dry-run
+recruit search "前端" --platform boss --city 上海 --active-within 7d -n 5
+recruit greet "前端" --platform boss --active-within 7d --dry-run
 ```
 
 需要短命令时可以在源码目录运行 `npm link`，之后使用 `recruit`。`--json` 输出便于脚本处理；`schema` 和 `platform list` 用于发现实际命令和平台能力。
