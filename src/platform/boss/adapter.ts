@@ -1,11 +1,18 @@
 import { join } from 'node:path';
 import { z } from 'zod';
 import { defineCapability, definePlatform, type Platform } from '../../core/platform.js';
-import { roleSchema } from '../../core/schemas.js';
+import { roleSchema, searchInputSchema } from '../../core/schemas.js';
 import { withBrowser, navigate, type BrowserRunner } from '../../runtime/browser.js';
 import { readJson, writeJson } from '../../runtime/storage.js';
 import { RecruitmentError } from '../../shared/errors.js';
-import { BOSS_LOGIN, identify, listPositions, openHome, type BossSession } from './session.js';
+import {
+  BOSS_LOGIN,
+  bossOptionsSchema,
+  identify,
+  listPositions,
+  openHome,
+  type BossSession,
+} from './session.js';
 import { readCandidateDetail, readJobDetail, searchCandidates, searchJobs } from './discovery.js';
 import { prepareContact, sendContact } from './outreach.js';
 
@@ -30,6 +37,7 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
       }),
       capability({
         id: 'opportunity.search',
+        inputSchema: searchInputSchema.extend({ options: bossOptionsSchema.default({}) }),
         description: '按当前身份搜索职位或推荐候选人',
         effect: 'read',
         roles: ['seeker', 'recruiter'],

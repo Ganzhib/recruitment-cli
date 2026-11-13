@@ -2,7 +2,6 @@ import { resolve } from 'node:path';
 import type { Platform, PlatformSession } from '../core/platform.js';
 import { PlatformRegistry } from '../core/registry.js';
 import {
-  capabilitySchemas,
   type CapabilityId,
   type CapabilityInput,
   type CapabilityPayload,
@@ -89,13 +88,13 @@ export class RecruitmentClient {
     capability: K,
     input: CapabilityInput<K>,
   ) {
-    if (
-      this.registry.require(target.platform, capability).capabilities.get(capability)!.effect !==
-      'read'
-    ) {
+    const definition = this.registry
+      .require(target.platform, capability)
+      .capabilities.get(capability)!;
+    if (definition.effect !== 'read') {
       throw new RecruitmentError('INPUT', '写操作需要通过联系计划执行。');
     }
-    const payload = capabilitySchemas[capability].input.parse(input) as CapabilityPayload<K>;
+    const payload = definition.inputSchema.parse(input) as CapabilityPayload<K>;
     return this.session(target, (session) => session.invoke(capability, payload));
   }
 }
