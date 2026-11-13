@@ -57,7 +57,7 @@ recruit --version
 recruit demo
 ```
 
-也可以下载 Release 中的 `.tgz`，运行 `npm install -g ./下载的文件名.tgz`。安装包包含 CLI、SDK 和 Demo，适用于 Windows、macOS 和 Linux；安装时仍需联网下载运行依赖。附件 `SHA256SUMS` 可用于核对下载文件。GitHub Release 不会同步更新 npm registry 的 `latest`。
+也可以下载 Release 中的 `.tgz`，运行 `npm install -g ./下载的文件名.tgz`。安装包包含 CLI、SDK 和 Demo，适用于 Windows、macOS 和 Linux；安装时仍需联网下载运行依赖。附件 `SHA256SUMS` 可用于核对下载文件。发布流程会将同一个安装包同步到 npm registry 的 `latest`。
 
 npm 包名为 `@ganzhibin/recruitment-cli`，安装后的命令为 `recruit`。安装命令：
 
@@ -75,7 +75,9 @@ Demo 页面随 npm 包分发，不需要下载源码或安装开发依赖。浏�
 
 `main` 更新、Pull Request 和手动运行 CI 都会在 Linux 与 Windows 上执行格式、类型、单元测试、离线浏览器测试、CLI 冒烟和安装包检查。Linux 构建结果保留为 Actions 的 `cli-release` 附件。
 
-发布时一起更新 `package.json`、`package-lock.json` 和 CLI 的版本号，然后提交到 `main`。两套检查都通过后，CI 自动创建对应的 `vX.Y.Z` 标签与 GitHub Release，上传 npm 安装包和 SHA-256 校验文件。已发布的版本保持不变；新版本必须递增版本号。流程仅使用 GitHub 自带的令牌，不需要 npm 发布密钥。上传未完成时保留为草稿，同一提交重新运行 CI 可以完成发布。
+发布时一起更新 `package.json`、`package-lock.json` 和 CLI 的版本号，然后提交到 `main`。两套检查都通过后，CI 自动创建对应的 `vX.Y.Z` 标签与 GitHub Release，上传 npm 安装包和 SHA-256 校验文件，再下载该 Release 的原始安装包并发布到 npm 的 `latest`。已发布的版本保持不变；新版本必须递增版本号。旧版本流水线重跑不会降低 `latest`。GitHub 上传未完成时保留为草稿；npm 发布失败会使 CI 失败，可在修复权限后手动重新运行。
+
+npm 使用 OIDC 可信发布，无需保存长期 npm 发布密钥。包的可信发布设置需要允许 GitHub 仓库 `Ganzhib/recruitment-cli` 的工作流 `ci.yml` 直接发布。该配置只需建立一次；只有通过检查的 `main` 构建会执行发布。已有 npm 版本会核对安装包完整性，内容不一致时停止，防止两个下载渠道出现同名但不同内容的包。
 
 本地运行 `npm run pack:release` 可以生成相同格式的安装包与发布说明，文件位于被 Git 忽略的 `release-artifacts/`。
 

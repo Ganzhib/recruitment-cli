@@ -11,3 +11,4 @@ site-dist/
 
 site/vendor/
 release-artifacts/
+npm-artifacts/

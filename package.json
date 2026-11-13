@@ -47,7 +47,8 @@
     "build:site": "node scripts/build-site.mjs",
     "predemo": "node scripts/prepare-site.mjs",
     "pretest:browser": "node scripts/prepare-site.mjs",
-    "pack:release": "npm run build && node scripts/build-release.mjs"
+    "pack:release": "npm run build && node scripts/build-release.mjs",
+    "publish:npm": "node scripts/publish-npm.mjs"
   },
   "dependencies": {
     "commander": "^14.0.0",

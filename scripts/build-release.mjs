@@ -41,7 +41,7 @@ recruit demo
 \`\`\`
 
 也可以下载 \`${filename}\`，然后执行 \`npm install -g ./文件名.tgz\`。
-安装时 npm 会下载运行依赖；本次通过 GitHub Releases 分发，不会更新 npm registry 的 latest 版本。
+安装时 npm 会下载运行依赖。发布流程随后将同一个安装包同步到 npm 的 latest 标签，完成后也可以运行 \`npm install -g ${pkg.name}@latest\` 安装。
 
 附件 \`SHA256SUMS\` 提供安装包的 SHA-256 校验值。
 `,
