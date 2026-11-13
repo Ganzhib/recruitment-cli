@@ -104,11 +104,14 @@ export async function sendContact(session: BossSession, target: Target): Promise
   if (session.profile.role === 'seeker') {
     if (session.page.url() !== target.url)
       throw new RecruitmentError('INPUT', '职位页面已变化，请重新筛选。');
-    const button = session.page.locator(selectors.seekerContact).filter({ hasText: /^立即沟通$/ });
-    if (!(await button.count()))
+    const button = session.page.locator(selectors.seekerContact).filter({
+      hasText: /^\s*立即沟通\s*$/,
+      visible: true,
+    });
+    if ((await button.count()) !== 1)
       return {
         state: 'unavailable',
-        evidence: { source: 'page', message: '页面已无立即沟通按钮，未点击。' },
+        evidence: { source: 'page', message: '页面没有唯一可见的立即沟通按钮，未点击。' },
       };
     const securityId = new URL(target.url).searchParams.get('securityId');
     if (!securityId) throw new RecruitmentError('INPUT', '职位缺少沟通上下文 securityId。');

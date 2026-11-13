@@ -6,3 +6,6 @@ import { createBrowserRunner, type BrowserEngine } from '../../runtime/browser.j
 // The driver implements the Playwright protocol but ships independent nominal
 // handle types. Keep that type bridge confined to the browser-launch boundary.
 export const bossBrowser = createBrowserRunner(chromium as unknown as BrowserEngine);
+export const bossBackgroundBrowser = createBrowserRunner(chromium as unknown as BrowserEngine, {
+  headless: true,
+});

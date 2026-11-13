@@ -11,6 +11,41 @@ import { fixtureBrowser } from './fixtures.js';
 import { waitForBossSearchReady } from '../../src/platform/boss/http-session.js';
 import { writeJson } from '../../src/runtime/storage.js';
 import { join } from 'node:path';
+import { searchJobs } from '../../src/platform/boss/discovery.js';
+
+test('browser search reads the normal page POST response without duplicating the request', async () => {
+  let posts = 0;
+  const browser = fixtureBrowser(async (route) => {
+    const url = new URL(route.request().url());
+    if (url.origin !== BOSS_ORIGIN) return route.abort();
+    if (url.pathname === '/web/geek/job')
+      return route.fulfill({
+        contentType: 'text/html',
+        body: `<script>
+        fetch('/wapi/zpgeek/search/joblist.json', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({query:'TypeScript',city:'101020100',page:'1'})});
+      </script>`,
+      });
+    if (url.pathname === '/wapi/zpgeek/search/joblist.json') {
+      posts++;
+      assert.equal(route.request().method(), 'POST');
+      return route.fulfill({ json: { code: 0, zpData: { jobList: [], hasMore: false } } });
+    }
+    return route.abort();
+  });
+  await browser('', async (_context, page) => {
+    const result = await searchJobs(
+      { page, profile: { id: 'fixture', name: 'Fixture', role: 'seeker' } },
+      {
+        query: 'TypeScript',
+        city: '上海',
+        page: 1,
+        options: { transport: 'browser' },
+      },
+    );
+    assert.deepEqual(result.targets, []);
+    assert.equal(posts, 1);
+  });
+});
 
 test('login waits for the website to finish creating its search credential', async () =>
   temporaryHome(async (home) => {
@@ -113,6 +148,7 @@ test('normal login saves a local HTTP session; subsequent job search opens no br
     });
     await loginClient.login({ platform: 'boss' });
     let gets = 0;
+    let posts = 0;
     let disposed = 0;
     t.mock.method(
       request,
@@ -121,7 +157,7 @@ test('normal login saves a local HTTP session; subsequent job search opens no br
         const state = options!.storageState;
         assert.ok(state && typeof state !== 'string');
         let cookies = state.cookies;
-        return {
+        const client = {
           get: async (
             url: string,
             input: { headers: Record<string, string>; maxRetries: number; maxRedirects: number },
@@ -163,11 +199,27 @@ test('normal login saves a local HTTP session; subsequent job search opens no br
               json: async () => ({ code: 0, message: '', zpData }),
             };
           },
+          post: async (
+            url: string,
+            input: {
+              form: Record<string, string>;
+              headers: Record<string, string>;
+              maxRetries: number;
+              maxRedirects: number;
+            },
+          ) => {
+            posts++;
+            assert.equal(new URL(url).search, '');
+            assert.equal(input.form.query, '前端');
+            assert.equal(input.form.city, '101020100');
+            return client.get(url + '?' + new URLSearchParams(input.form), input);
+          },
           storageState: async () => ({ cookies, origins: [] }),
           dispose: async () => {
             disposed++;
           },
-        } as unknown as APIRequestContext;
+        };
+        return client as unknown as APIRequestContext;
       },
     );
     const client = createRecruitmentClient({
@@ -192,6 +244,7 @@ test('normal login saves a local HTTP session; subsequent job search opens no br
     );
     assert.equal(result.targets[0].title, '前端工程师');
     assert.equal(gets, 2);
+    assert.equal(posts, 1);
     assert.equal(disposed, 2);
     const identity = await client.accounts.resolve('boss');
     await client.accounts.use(identity, async (account) => {

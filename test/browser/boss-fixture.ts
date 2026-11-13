@@ -55,7 +55,7 @@ export function bossFixture(role: 'seeker' | 'recruiter') {
     }
     if (url.pathname === '/job_detail/job-1.html')
       return html(
-        `<h1>TypeScript 工程师</h1><div class="job-sec-text">负责 TypeScript 开发</div><span class="boss-active-time">${state.activity}</span><button class="btn-startchat" onclick="fetch('/wapi/zpgeek/friend/add.json?securityId=fabricated-id').then(()=>this.textContent='继续沟通')">立即沟通</button>`,
+        `<h1>TypeScript 工程师</h1><div class="job-sec-text">负责 TypeScript 开发</div><span class="boss-active-time">${state.activity}</span><button class="btn-startchat" onclick="fetch('/wapi/zpgeek/friend/add.json?securityId=fabricated-id').then(()=>this.textContent='继续沟通')">\n  立即沟通\n</button><button class="btn-startchat" style="display:none">立即沟通</button>`,
       );
     if (url.pathname === '/web/chat/recommend')
       return html('<iframe name="recommendFrame" src="/web/frame/recommend"></iframe>');
@@ -74,8 +74,8 @@ export function bossFixture(role: 'seeker' | 'recruiter') {
     t.mock.method(
       request,
       'newContext',
-      async (options: Parameters<typeof request.newContext>[0]) =>
-        ({
+      async (options: Parameters<typeof request.newContext>[0]) => {
+        const client = {
           get: async (url: string) => {
             let data: unknown;
             await handle({
@@ -93,9 +93,12 @@ export function bossFixture(role: 'seeker' | 'recruiter') {
               json: async () => data,
             };
           },
+          post: async (url: string) => client.get(url),
           storageState: async () => options!.storageState,
           dispose: async () => {},
-        }) as unknown as APIRequestContext,
+        };
+        return client as unknown as APIRequestContext;
+      },
     );
   };
   return { browser, state, mockHttp };

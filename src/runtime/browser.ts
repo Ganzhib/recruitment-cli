@@ -34,11 +34,14 @@ export async function browserExecutable(): Promise<string> {
   );
 }
 export type BrowserEngine = Pick<typeof chromium, 'launchPersistentContext'>;
-export function createBrowserRunner(engine: BrowserEngine): BrowserRunner {
+export function createBrowserRunner(
+  engine: BrowserEngine,
+  options: { headless?: boolean } = {},
+): BrowserRunner {
   return async (directory, action) => {
     const context = await engine.launchPersistentContext(join(directory, 'browser-profile'), {
       executablePath: await browserExecutable(),
-      headless: false,
+      headless: options.headless ?? false,
       chromiumSandbox: true,
       viewport: { width: 1440, height: 1000 },
     });
@@ -65,7 +68,7 @@ export function createBrowserRunner(engine: BrowserEngine): BrowserRunner {
         page.on('crash', () => report('crash'));
         page.on('close', () => report('closed'));
       }
-      await page.bringToFront();
+      if (!options.headless) await page.bringToFront();
       return await action(context, page);
     } finally {
       await context.close();

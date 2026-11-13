@@ -39,10 +39,13 @@ interface BossAdapterSession {
 }
 export interface BossPlatformOptions {
   browser?: BrowserRunner;
+  sessionBrowser?: BrowserRunner;
   loginTimeoutMs?: number;
 }
 export function createBossPlatform(options: BossPlatformOptions = {}): Platform {
-  const browser = options.browser ?? bossBrowser;
+  const browser = options.sessionBrowser ?? options.browser ?? bossBrowser;
+  const loginBrowser = options.browser ?? bossBrowser;
+  const verificationTimeout = options.sessionBrowser ? 15000 : options.loginTimeoutMs;
   const capability = defineCapability<BossAdapterSession>();
   return definePlatform<BossAdapterSession>({
     id: 'boss',
@@ -63,7 +66,11 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
         effect: 'read',
         roles: ['seeker', 'recruiter'],
         execute: (session, input) => {
-          if (session.profile.role === 'seeker' && session.httpDirectory)
+          if (
+            session.profile.role === 'seeker' &&
+            session.httpDirectory &&
+            input.options.transport !== 'browser'
+          )
             return searchJobsUsing(
               (path, referer) => bossHttpGet(session.httpDirectory!, path, referer),
               input,
@@ -106,7 +113,7 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
       }),
     ],
     login: (directory) =>
-      browser(directory, async (context, page) => {
+      loginBrowser(directory, async (context, page) => {
         await navigate(page, BOSS_LOGIN);
         let authenticatedPage = await waitForBossLogin(context, options.loginTimeoutMs);
         if (new URL(authenticatedPage.url()).pathname.startsWith('/web/geek/'))
@@ -122,7 +129,7 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
       if (http?.profile.role === 'seeker' && !hasBossSearchToken(http.cookies)) {
         await browser(account.directory, async (context, page) => {
           await openHome(page, 'seeker');
-          const ready = await waitForBossSearchReady(context, options.loginTimeoutMs);
+          const ready = await waitForBossSearchReady(context, verificationTimeout);
           const actual = await identify(ready);
           if (actual.id !== account.identity.accountId)
             throw new RecruitmentError('AUTH', '浏览器账号已变化，未覆盖原会话。');
@@ -180,7 +187,7 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
         await openHome(page, saved.role);
         const ready =
           saved.role === 'seeker'
-            ? await waitForBossSearchReady(context, options.loginTimeoutMs)
+            ? await waitForBossSearchReady(context, verificationTimeout)
             : page;
         const profile = await identify(ready);
         await saveBossHttpSession(account.directory, context, ready, profile);

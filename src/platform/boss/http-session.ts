@@ -114,21 +114,29 @@ export async function bossHttpGet<T>(
     timeout: 20_000,
   });
   try {
-    const response = await client
-      .get(url.href, {
-        maxRedirects: 0,
-        maxRetries: 0,
-        headers: {
-          Referer: referer,
-          'X-Requested-With': 'XMLHttpRequest',
-          ...(token ? { zp_token: token } : {}),
-        },
-      })
-      .catch(() => {
-        throw new RecruitmentError('NETWORK', 'BOSS 接口连接失败，未自动重试。', {
-          endpoint: url.pathname,
-        });
+    const requestOptions = {
+      maxRedirects: 0,
+      maxRetries: 0,
+      headers: {
+        Referer: referer,
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { zp_token: token } : {}),
+      },
+    };
+    // The current jobs page submits a form. GET is accepted by identity routes,
+    // but the search route can reject it even with a valid authenticated session.
+    const response = await (
+      url.pathname === '/wapi/zpgeek/search/joblist.json'
+        ? client.post(url.origin + url.pathname, {
+            ...requestOptions,
+            form: Object.fromEntries(url.searchParams),
+          })
+        : client.get(url.href, requestOptions)
+    ).catch(() => {
+      throw new RecruitmentError('NETWORK', 'BOSS 接口连接失败，未自动重试。', {
+        endpoint: url.pathname,
       });
+    });
     const refreshed = (await client.storageState()).cookies.filter((cookie) =>
       domains.includes(cookie.domain),
     );

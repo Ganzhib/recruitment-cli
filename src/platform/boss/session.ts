@@ -16,7 +16,10 @@ export const candidateContextSchema = z.object({
   candidateId: z.string().min(1),
 });
 export type CandidateContext = z.infer<typeof candidateContextSchema>;
-export const bossOptionsSchema = z.strictObject({ job: z.string().min(1).optional() });
+export const bossOptionsSchema = z.strictObject({
+  job: z.string().min(1).optional(),
+  transport: z.enum(['http', 'browser']).optional(),
+});
 interface BossEnvelope<T> {
   code: number;
   message: string;

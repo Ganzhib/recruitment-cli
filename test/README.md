@@ -23,4 +23,8 @@
 
 `live/boss-refresh.ts` 复用已绑定账号的浏览器档案，等待正常页面完成搜索会话验证，再保存凭证并只读搜索一页“前端 / 上海”岗位。若平台要求本人验证，由用户完成；脚本不会解算或绕过验证，也不会发送招呼。身份接口成功不代表搜索会话已经就绪。
 
+BOSS 搜索使用当前网页的 POST 表单协议，身份查询仍使用 GET。需要显式使用网页搜索时，可传入平台 `options.transport="browser"` 和 `maxPages=1`，读取正常页面的搜索响应；该模式目前仅支持第一页，不会自动重试被平台拒绝的请求。`boss-http.test.ts` 同时核对 POST 参数与网页响应读取；沟通测试覆盖带空白文本和隐藏副本的按钮。
+
+本地 Demo 在已登录操作中复用按账号隔离的后台浏览器，空闲两分钟或服务关闭时释放；扫码登录仍使用可见窗口。后台遇到验证不会自动发送或重放操作。`browser-pool.test.ts` 验证跨操作复用、异常不重放和资源释放。
+
 提交前执行仓库要求的六项检查：`npm run format:check`、`npm run check`、`npm test`、`npm run test:browser`、`npm run smoke`、`npm run check:package`。`check:package` 在临时目录安装打包产物并验证 CLI、SDK 和 Demo，结束后清理临时目录。

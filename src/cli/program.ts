@@ -13,7 +13,7 @@ import {
   type SelectionInput,
 } from '../core/schemas.js';
 import { RecruitmentClient } from '../services/client.js';
-import { defaultPlatforms } from '../platform/builtins.js';
+import { defaultPlatforms, createDemoPlatforms } from '../platform/builtins.js';
 import { companySiteSchema } from '../platform/company-site/config.js';
 import { recruitmentHome } from '../runtime/accounts.js';
 import { browserExecutable } from '../runtime/browser.js';
@@ -82,12 +82,14 @@ export function createRecruitProgram(options: ProgramOptions = {}): Command {
       JSON.stringify({ ok: true, data: value }, null, program.opts().json ? undefined : 2) + '\n',
     );
   };
-  const client = async () => {
+  const client = async (lifecycle?: { close?: () => Promise<void> }) => {
     const flags = program.opts<{ home: string; sites?: string }>();
     const sites = flags.sites ? z.array(companySiteSchema).parse(await jsonFile(flags.sites)) : [];
+    const demo = lifecycle && !options.platforms ? createDemoPlatforms(sites) : undefined;
+    if (lifecycle && demo) lifecycle.close = demo.close;
     return new RecruitmentClient({
       home: flags.home,
-      platforms: options.platforms ?? defaultPlatforms(sites),
+      platforms: options.platforms ?? demo?.platforms ?? defaultPlatforms(sites),
     });
   };
   program
@@ -103,7 +105,18 @@ export function createRecruitProgram(options: ProgramOptions = {}): Command {
         root = fileURLToPath(new URL('../../site/', import.meta.url));
         await access(resolve(root, 'demo/index.html'));
       }
-      const server = createDemoServer({ client: await client(), root });
+      const lifecycle: { close?: () => Promise<void> } = {};
+      const server = createDemoServer({ client: await client(lifecycle), root });
+      server.once('close', () => {
+        void lifecycle.close?.();
+      });
+      const stop = () => {
+        server.close();
+        server.closeAllConnections();
+        void lifecycle.close?.();
+      };
+      process.once('SIGINT', stop);
+      process.once('SIGTERM', stop);
       server.listen(port, '127.0.0.1');
       await once(server, 'listening');
       emit({ url: `http://127.0.0.1:${port}/demo/` });
