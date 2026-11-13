@@ -61,7 +61,9 @@ export async function bossGet<T>(page: Page, path: string): Promise<T> {
       endpoint,
       ...(response.httpError ? { httpStatus: response.httpError } : {}),
     });
-  const envelope = response.envelope;
+  return bossPayload(response.envelope, endpoint);
+}
+export function bossPayload<T>(envelope: BossEnvelope<T>, endpoint: string): T {
   if (envelope.code !== 0)
     throw new RecruitmentError(
       envelope.code === 37 ? 'AUTH' : 'PLATFORM',

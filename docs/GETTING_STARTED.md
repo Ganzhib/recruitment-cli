@@ -65,6 +65,10 @@ recruit greet "前端" --platform boss --active-within 7d --dry-run
 
 需要短命令时可以在源码目录运行 `npm link`，之后使用 `recruit`。`--json` 输出便于脚本处理；`schema` 和 `platform list` 用于发现实际命令和平台能力。
 
+正常登录后，BOSS 会话自动保存在本机账号目录。身份读取和求职端岗位列表可直接通过 HTTP 请求完成，不必为每次列表搜索启动浏览器；接口更新的会话信息会写回本地。旧的浏览器会话在下次正常身份校验成功后自动补存。
+
+最小只读搜索可运行 `recruit --json search "前端" --platform boss --city 上海 --active-within any --max-pages 1 -n 1`。`any` 不要求额外读取岗位详情；启用活跃度筛选、读取详情及原生打招呼仍按需使用浏览器。环境异常、会话失效或验证要求会停止本次请求，不会自动连续重试。离线测试通过不代表当前账号已通过 BOSS 实站验证。
+
 招聘者先用 `recruit positions --platform boss` 确认岗位，再通过 `--options` 指定岗位 ID 或完整名称。确认计划后可使用 `recruit plan run <plan-id>`；实际发送与未确认结果都会保留记录。
 
 后续入口：[完整使用说明](../README.md) · [命令与类型](API.md)。
