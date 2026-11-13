@@ -29,6 +29,11 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Use installed Chromium for offline tests
         run: node --input-type=module -e "import { appendFileSync } from 'node:fs'; import { chromium } from 'playwright'; appendFileSync(process.env.GITHUB_ENV, 'RECRUIT_BROWSER_PATH=' + chromium.executablePath() + '\n');"
+      - name: Use the runner's Chrome sandbox helper on Linux
+        if: runner.os == 'Linux'
+        run: |
+          test -u /opt/google/chrome/chrome-sandbox
+          echo "CHROME_DEVEL_SANDBOX=/opt/google/chrome/chrome-sandbox" >> "$GITHUB_ENV"
       - run: npm run test:browser
       - run: npm run smoke
       - run: npm run check:package

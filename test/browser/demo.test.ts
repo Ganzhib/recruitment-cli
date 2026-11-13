@@ -177,9 +177,12 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
       );
       assert.equal(await page.locator('.markdown h2').innerText(), '匹配结果');
       assert.equal(await page.locator('.message-avatar, .message-label').count(), 0);
-      assert.equal(
-        await page.locator('.message.user').evaluate((row) => getComputedStyle(row).justifyContent),
-        'flex-end',
+      assert.ok(
+        await page.locator('.message.user').evaluate((row) => {
+          const bubble = row.querySelector('.message-content')!.getBoundingClientRect();
+          return Math.abs(row.getBoundingClientRect().right - bubble.right) <= 1;
+        }),
+        'User messages align to the right edge of the conversation',
       );
       assert.equal(await page.locator('.markdown table tbody tr').count(), 1);
       assert.equal(
