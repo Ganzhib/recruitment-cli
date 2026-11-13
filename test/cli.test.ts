@@ -39,6 +39,15 @@ test('invalid input produces one structured error and no success output', async 
   assert.equal(result.stdout, '');
   assert.equal(JSON.parse(result.stderr).ok, false);
 });
+
+test('platform discovery exposes BOSS-owned job options in its actual input schema', async () => {
+  const result = await invoke(['--json', 'platform', 'list']);
+  const platforms = JSON.parse(result.stdout).data;
+  const search = platforms[0].capabilities.find(
+    (capability: { id: string }) => capability.id === 'opportunity.search',
+  );
+  assert.equal(search.inputSchema.properties.options.properties.job.type, 'string');
+});
 test('greet dry run freezes a plan without sending and CLI flags use common schemas', async () =>
   temporaryHome(async (home) => {
     const { platform, state } = fakePlatform();

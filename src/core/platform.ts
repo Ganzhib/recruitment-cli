@@ -32,13 +32,14 @@ export function defineCapability<S>() {
     description: string;
     effect: K extends 'contact.send' ? 'remote-write' : 'read';
     roles: readonly Role[];
+    inputSchema?: z.ZodType<CapabilityPayload<K>>;
     execute(
       session: S,
       input: z.output<(typeof capabilitySchemas)[K]['input']>,
     ): Promise<CapabilityOutput<K>>;
   }): Capability<S> => ({
     ...definition,
-    inputSchema: capabilitySchemas[definition.id].input,
+    inputSchema: definition.inputSchema ?? capabilitySchemas[definition.id].input,
     outputSchema: capabilitySchemas[definition.id].output,
     execute: (session, input) =>
       definition.execute(session, input as z.output<(typeof capabilitySchemas)[K]['input']>),

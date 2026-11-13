@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { Page } from 'playwright';
 import { z } from 'zod';
 import { defineCapability, definePlatform, type Platform } from '../../core/platform.js';
-import type { AccountProfile, Target } from '../../core/schemas.js';
+import { searchInputSchema, type AccountProfile, type Target } from '../../core/schemas.js';
 import { withBrowser, navigate, type BrowserRunner } from '../../runtime/browser.js';
 import { RecruitmentError } from '../../shared/errors.js';
 import { companySiteSchema, type CompanySiteConfig } from './config.js';
@@ -35,6 +35,7 @@ export function createCompanySitePlatform(
     capabilities: [
       capability({
         id: 'opportunity.search',
+        inputSchema: searchInputSchema.extend({ options: z.strictObject({}).default({}) }),
         description: '读取公司官网公开职位',
         effect: 'read',
         roles: ['seeker'],
