@@ -4,7 +4,9 @@ import { EventEmitter } from 'node:events';
 import type { Page, Response } from 'playwright';
 import { createRecruitmentClient, createBossPlatform } from '../../src/index.js';
 import { observeGreeting } from '../../src/platform/boss/outreach.js';
-import { bossFixture } from './fixtures.js';
+import { bossFixture } from './boss-fixture.js';
+import { fixtureBrowser } from './fixtures.js';
+import { waitForBossLogin } from '../../src/platform/boss/session.js';
 import { temporaryHome } from '../helpers.js';
 
 for (const role of ['seeker', 'recruiter'] as const) {
@@ -98,8 +100,6 @@ test('native greeting ignores successful responses for other targets', async () 
 });
 
 test('BOSS login follows a new authenticated tab when the original login page closes', async () => {
-  const { waitForBossLogin } = await import('../../src/platform/boss/session.js');
-  const { fixtureBrowser } = await import('./fixtures.js');
   const browser = fixtureBrowser(async (route) =>
     route.fulfill({ contentType: 'text/html', body: '<main>fabricated login</main>' }),
   );
