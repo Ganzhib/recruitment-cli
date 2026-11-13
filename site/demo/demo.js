@@ -3,6 +3,19 @@ import DOMPurify from '../vendor/purify.js';
 import { createOrb } from './orb.js';
 
 const $ = (selector) => document.querySelector(selector);
+const contactPreferenceKey = 'recruitment-cli.allowContact';
+try {
+  $('#allow-contact').checked = localStorage.getItem(contactPreferenceKey) !== 'false';
+} catch {
+  $('#allow-contact').checked = true;
+}
+$('#allow-contact').addEventListener('change', () => {
+  try {
+    localStorage.setItem(contactPreferenceKey, String($('#allow-contact').checked));
+  } catch {
+    // The current selection still applies when browser storage is unavailable.
+  }
+});
 const state = {
   local: false,
   ready: false,
@@ -270,7 +283,6 @@ function reset(save = true) {
   $('#messages').replaceChildren();
   status('idle', '就绪');
   $('#welcome').hidden = false;
-  $('#allow-contact').checked = false;
   renderHistory();
   if (save) void saveUi().catch(historyError);
 }
@@ -787,6 +799,7 @@ $('#auto-greet').addEventListener('click', () => {
   $('#message-input').value =
     '请按刚才确定的岗位、城市和数量筛选，展示沟通计划后自动使用平台预制招呼语打招呼，并返回执行回执。条件不完整时先问我。';
   $('#allow-contact').checked = true;
+  $('#allow-contact').dispatchEvent(new Event('change'));
   $('#message-input').focus();
 });
 
@@ -798,3 +811,28 @@ document.querySelectorAll('[data-phrase]').forEach((button) => {
     input.focus();
   });
 });
+
+const composerShortcuts = $('#composer-shortcuts');
+function updateShortcutNavigation() {
+  $('#shortcuts-prev').disabled = composerShortcuts.scrollLeft <= 1;
+  $('#shortcuts-next').disabled = composerShortcuts.scrollLeft + composerShortcuts.clientWidth >= composerShortcuts.scrollWidth - 1;
+}
+function scrollShortcuts(direction) {
+  composerShortcuts.scrollBy({
+    left: direction * composerShortcuts.clientWidth * 0.85,
+    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+  });
+}
+$('#shortcuts-prev').addEventListener('click', () => scrollShortcuts(-1));
+$('#shortcuts-next').addEventListener('click', () => scrollShortcuts(1));
+composerShortcuts.addEventListener('scroll', updateShortcutNavigation, { passive: true });
+composerShortcuts.addEventListener('keydown', (event) => {
+  if (event.target !== composerShortcuts || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+  event.preventDefault();
+  scrollShortcuts(event.key === 'ArrowLeft' ? -1 : 1);
+});
+const shortcutObserver = new ResizeObserver(updateShortcutNavigation);
+shortcutObserver.observe(composerShortcuts);
+composerShortcuts.querySelectorAll('button').forEach((button) => shortcutObserver.observe(button));
+window.addEventListener('pagehide', () => shortcutObserver.disconnect());
+updateShortcutNavigation();

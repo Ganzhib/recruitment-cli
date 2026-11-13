@@ -140,7 +140,7 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
         document.querySelector('#mode-badge')?.textContent?.includes('fixture-model'),
       );
       assert.equal(await page.locator('#activity-panel, #activity-toggle').count(), 0);
-      assert.equal(await page.locator('#allow-contact').isChecked(), false);
+      assert.equal(await page.locator('#allow-contact').isChecked(), width === 1280);
       await page.locator('#allow-contact').uncheck();
       const previousRequests = requests.length;
       await page.getByRole('button', { name: '查看回执', exact: true }).click();
@@ -194,11 +194,16 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
         true,
       );
       if (width === 1280) await screenshot(page, 'demo-markdown');
+      await page.reload();
+      await page.waitForFunction(
+        () => !document.querySelector('#send-button')?.hasAttribute('disabled'),
+      );
+      assert.equal(await page.locator('#allow-contact').isChecked(), false);
     }
   });
 });
 
-test('local demo restores history after reload without sending requests or restoring contact permission', async () => {
+test('local demo restores history without sending and keeps contact enabled by default', async () => {
   const { browser: local, requests } = demoFixture({
     configured: true,
     history: {
@@ -241,7 +246,7 @@ test('local demo restores history after reload without sending requests or resto
       assert.equal(await page.locator('.markdown strong').innerText(), '已整理计划');
       assert.match(await page.locator('.message.error').innerText(), /未自动重跑/);
       assert.equal(await page.locator('.tool-inline').getAttribute('data-state'), 'error');
-      assert.equal(await page.locator('#allow-contact').isChecked(), false);
+      assert.equal(await page.locator('#allow-contact').isChecked(), true);
       assert.equal(requests.length, 0);
       assert.equal(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

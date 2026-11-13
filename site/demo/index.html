@@ -173,7 +173,7 @@
           <div class="context-bar">
             <span><span class="status-dot"></span> <b id="context-role">求职者示例</b></span
             ><label id="permission-label" hidden
-              ><input type="checkbox" id="allow-contact" /> 允许自动打招呼</label
+              ><input type="checkbox" id="allow-contact" checked /> 允许自动打招呼</label
             ><label id="platform-label" hidden
               >平台
               <select id="platform">
@@ -181,13 +181,13 @@
               </select></label
             ><span class="sample-label" id="sample-label">示例不连接真实账号</span>
           </div>
-          <div id="live-actions" class="composer-actions" hidden>
-            <button type="button" class="outline-button" id="login-account">扫码登录 BOSS</button>
-            <button type="button" class="outline-button" id="auto-greet">准备自动打招呼指令</button>
-          </div>
-          <div class="quick-phrases" aria-label="常用语">
-            <span class="quick-phrases-label">常用语</span>
-            <div class="quick-phrases-list" tabindex="0" aria-label="常用语快捷按钮，可左右滑动">
+          <div class="quick-phrases" aria-label="快捷操作">
+            <button type="button" class="shortcut-arrow" id="shortcuts-prev" aria-label="向左滚动快捷操作" aria-controls="composer-shortcuts" disabled>←</button>
+            <div class="quick-phrases-list" id="composer-shortcuts" tabindex="0" aria-label="快捷操作，可左右滑动">
+              <div id="live-actions" class="composer-actions" hidden>
+                <button type="button" class="outline-button" id="login-account">扫码登录 BOSS</button>
+                <button type="button" class="outline-button" id="auto-greet">准备自动打招呼指令</button>
+              </div>
               <button
                 type="button"
                 data-phrase="请沿用刚才确认的条件，再筛选 5 个匹配结果，排除已经看过或联系过的对象。条件不完整时先问我，暂不发起沟通。"
@@ -225,6 +225,7 @@
                 总结进展
               </button>
             </div>
+            <button type="button" class="shortcut-arrow" id="shortcuts-next" aria-label="向右滚动快捷操作" aria-controls="composer-shortcuts">→</button>
           </div>
           <form id="chat-form" class="composer">
             <textarea
