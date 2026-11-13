@@ -1,6 +1,6 @@
 {
   "name": "@ganzhibin/recruitment-cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "AI-native recruitment workflows for job seekers, recruiters and company career sites",
   "type": "module",
   "license": "MIT",
@@ -46,7 +46,8 @@
     "demo": "tsx site/demo/demo.ts",
     "build:site": "node scripts/build-site.mjs",
     "predemo": "node scripts/prepare-site.mjs",
-    "pretest:browser": "node scripts/prepare-site.mjs"
+    "pretest:browser": "node scripts/prepare-site.mjs",
+    "pack:release": "npm run build && node scripts/build-release.mjs"
   },
   "dependencies": {
     "commander": "^14.0.0",

@@ -1,15 +1,24 @@
 name: CI
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -18,7 +27,60 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npx playwright install --with-deps chromium
+      - name: Use installed Chromium for offline tests
+        run: node --input-type=module -e "import { appendFileSync } from 'node:fs'; import { chromium } from 'playwright'; appendFileSync(process.env.GITHUB_ENV, 'RECRUIT_BROWSER_PATH=' + chromium.executablePath() + '\n');"
       - run: npm run test:browser
       - run: npm run smoke
       - run: npm run check:package
       - run: npm run build:site
+      - run: npm run pack:release
+        if: runner.os == 'Linux'
+      - uses: actions/upload-artifact@v7
+        if: runner.os == 'Linux'
+        with:
+          name: cli-release
+          path: release-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: cli-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: cli-release
+          path: release-artifacts
+      - name: Publish new package version to GitHub Releases
+        working-directory: release-artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=$(jq -r .tag manifest.json)
+          package=$(jq -r .filename manifest.json)
+          sha256sum --check SHA256SUMS
+          existing=$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$tag\") | {draft, target_commitish}" | jq -s 'first // null')
+          if [ "$existing" != "null" ]; then
+            if [ "$(jq -r .draft <<< "$existing")" = "false" ]; then
+              echo "$tag is already published; leaving its assets unchanged."
+              exit 0
+            fi
+            if [ "$(jq -r .target_commitish <<< "$existing")" != "$GITHUB_SHA" ]; then
+              echo "An existing draft belongs to a different commit; refusing to replace it."
+              exit 1
+            fi
+          else
+            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "recruitment-cli $tag" --notes-file RELEASE_NOTES.md --generate-notes
+          fi
+          gh release upload "$tag" "$package" SHA256SUMS --clobber
+          gh release edit "$tag" --draft=false --latest

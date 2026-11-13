@@ -1157,23 +1157,10 @@ dialog code {
 }
 
 #live-actions.composer-actions {
-  position: static;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  width: 100%;
+  display: contents;
 }
 #live-actions.composer-actions[hidden] {
   display: none;
-}
-#live-actions.composer-actions .outline-button {
-  background: transparent;
-  border-color: #2a4058;
-  color: #a8c4df;
-  padding: 6px 10px;
-  border-radius: 7px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1407,13 +1394,11 @@ dialog code {
   min-width: 0;
   margin-bottom: 10px;
 }
-.quick-phrases-label {
-  flex-shrink: 0;
-  font-size: 10px;
-  color: #7995b0;
-}
 .quick-phrases-list {
+  flex: 1;
   display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 7px;
   min-width: 0;
   overflow-x: auto;
@@ -1422,6 +1407,8 @@ dialog code {
 }
 .quick-phrases-list button {
   flex-shrink: 0;
+  height: 30px;
+  line-height: 18px;
   padding: 5px 9px;
   border: 1px solid #263c53;
   border-radius: 16px;
@@ -1454,4 +1441,28 @@ dialog code {
 #history-panel::-webkit-scrollbar,
 .quick-phrases-list::-webkit-scrollbar {
   display: none;
+}
+
+.shortcut-arrow {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #263c53;
+  border-radius: 7px;
+  background: transparent;
+  color: #9db9d3;
+  font-size: 14px;
+}
+.shortcut-arrow:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+.shortcut-arrow:hover:not(:disabled) {
+  background: #172a3d;
+  color: #d3e4f7;
+}
+.shortcut-arrow:focus-visible {
+  outline: 2px solid #8cc7f4;
+  outline-offset: 2px;
 }

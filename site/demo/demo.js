@@ -815,7 +815,9 @@ document.querySelectorAll('[data-phrase]').forEach((button) => {
 const composerShortcuts = $('#composer-shortcuts');
 function updateShortcutNavigation() {
   $('#shortcuts-prev').disabled = composerShortcuts.scrollLeft <= 1;
-  $('#shortcuts-next').disabled = composerShortcuts.scrollLeft + composerShortcuts.clientWidth >= composerShortcuts.scrollWidth - 1;
+  $('#shortcuts-next').disabled =
+    composerShortcuts.scrollLeft + composerShortcuts.clientWidth >=
+    composerShortcuts.scrollWidth - 1;
 }
 function scrollShortcuts(direction) {
   composerShortcuts.scrollBy({
@@ -827,7 +829,8 @@ $('#shortcuts-prev').addEventListener('click', () => scrollShortcuts(-1));
 $('#shortcuts-next').addEventListener('click', () => scrollShortcuts(1));
 composerShortcuts.addEventListener('scroll', updateShortcutNavigation, { passive: true });
 composerShortcuts.addEventListener('keydown', (event) => {
-  if (event.target !== composerShortcuts || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+  if (event.target !== composerShortcuts || !['ArrowLeft', 'ArrowRight'].includes(event.key))
+    return;
   event.preventDefault();
   scrollShortcuts(event.key === 'ArrowLeft' ? -1 : 1);
 });

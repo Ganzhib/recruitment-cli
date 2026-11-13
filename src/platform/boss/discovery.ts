@@ -3,6 +3,7 @@ import type { SearchInput, SearchPage, Target, TargetDetail } from '../../core/s
 import { RecruitmentError } from '../../shared/errors.js';
 import { navigate } from '../../runtime/browser.js';
 import { bossActivity } from './activity.js';
+import { observeSearchResponse } from './search-response.js';
 import { bossSelectors as selectors } from './selectors.js';
 import {
   BOSS_ORIGIN,
@@ -10,7 +11,6 @@ import {
   candidateContextSchema,
   type CandidateContext,
   bossGet,
-  bossPayload,
   bossOptionsSchema,
   listPositions,
   type BossSession,
@@ -157,37 +157,13 @@ export async function searchJobs(session: BossSession, input: SearchInput): Prom
         '网页搜索模式当前读取第一页，请将 maxPages 设为 1。',
       );
     return searchJobsUsing(async <T>(path: string, referer: string): Promise<T> => {
-      const expected = new URL(path, BOSS_ORIGIN);
-      let payload: { code: number; message: string; zpData: T | null } | undefined;
-      const response = session.page.waitForResponse(
-        async (response) => {
-          const url = new URL(response.url());
-          const request = response.request();
-          const fields =
-            request.method() === 'POST'
-              ? new URLSearchParams(request.postData() ?? '')
-              : url.searchParams;
-          const matches =
-            url.origin === BOSS_ORIGIN &&
-            url.pathname === expected.pathname &&
-            fields.get('query') === input.query &&
-            fields.get('city') === expected.searchParams.get('city') &&
-            (fields.get('page') ?? '1') === '1' &&
-            Boolean(response.headers()['content-type']?.includes('json'));
-          if (!matches) return false;
-          // Consume the body while this document still owns the response. The
-          // site can redirect the page immediately after its search resolves.
-          try {
-            payload = await response.json();
-          } catch {
-            return false;
-          }
-          return true;
-        },
-        { timeout: 45000 },
-      );
-      await Promise.all([response, navigate(session.page, referer)]);
-      return bossPayload<T>(payload!, expected.pathname);
+      const observation = observeSearchResponse<T>(session.page, path);
+      try {
+        const [result] = await Promise.all([observation.result, navigate(session.page, referer)]);
+        return result;
+      } finally {
+        observation.dispose();
+      }
     }, input);
   }
   return searchJobsUsing(async (path, referer) => {

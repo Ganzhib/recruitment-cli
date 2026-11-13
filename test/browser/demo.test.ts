@@ -142,6 +142,29 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
       assert.equal(await page.locator('#activity-panel, #activity-toggle').count(), 0);
       assert.equal(await page.locator('#allow-contact').isChecked(), width === 1280);
       await page.locator('#allow-contact').uncheck();
+      assert.equal(
+        await page
+          .locator('#composer-shortcuts button')
+          .evaluateAll(
+            (buttons) =>
+              new Set(
+                buttons
+                  .filter((button) => button.getClientRects().length)
+                  .map((button) => Math.round(button.getBoundingClientRect().top)),
+              ).size,
+          ),
+        1,
+      );
+      if (width === 390) {
+        await page.locator('#shortcuts-next').click();
+        await page.waitForFunction(
+          () => document.querySelector('#composer-shortcuts')!.scrollLeft > 0,
+        );
+        await page.locator('#shortcuts-prev').click();
+        await page.waitForFunction(
+          () => document.querySelector('#composer-shortcuts')!.scrollLeft <= 1,
+        );
+      }
       const previousRequests = requests.length;
       await page.getByRole('button', { name: '查看回执', exact: true }).click();
       assert.match(await page.locator('#message-input').inputValue(), /已有的沟通回执/);

@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createRecruitmentClient, createCompanySitePlatform } from '../dist/index.js';
+
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const version = spawnSync(process.execPath, ['dist/recruit.js', '--version'], { encoding: 'utf8' });
+assert.equal(version.status, 0, version.stderr);
+assert.equal(version.stdout.trim(), pkg.version);
 
 for (const args of [
   ['--json', 'platform', 'list'],

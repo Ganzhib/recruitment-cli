@@ -49,6 +49,16 @@
 
 ## npm 安装与本地 AI Demo
 
+最新构建通过 [GitHub Releases](https://github.com/Ganzhib/recruitment-cli/releases/latest) 分发。需要 Node.js ≥ 22.16；安装 v0.1.2 并打开本地 Demo：
+
+```bash
+npm install -g https://github.com/Ganzhib/recruitment-cli/releases/download/v0.1.2/ganzhibin-recruitment-cli-0.1.2.tgz
+recruit --version
+recruit demo
+```
+
+也可以下载 Release 中的 `.tgz`，运行 `npm install -g ./下载的文件名.tgz`。安装包包含 CLI、SDK 和 Demo，适用于 Windows、macOS 和 Linux；安装时仍需联网下载运行依赖。附件 `SHA256SUMS` 可用于核对下载文件。GitHub Release 不会同步更新 npm registry 的 `latest`。
+
 npm 包名为 `@ganzhibin/recruitment-cli`，安装后的命令为 `recruit`。安装命令：
 
 ```bash
@@ -59,7 +69,15 @@ recruit demo
 
 Demo 页面随 npm 包分发，不需要下载源码或安装开发依赖。浏览器打开输出的本机地址，填写模型服务地址、模型名称和 API Key，点击「扫码登录 BOSS」；说明岗位、城市与数量后，点击「准备自动打招呼指令」并发送。AI 会在本轮沟通权限开启时生成并执行计划，显示真实工具调用与回执。默认使用平台预制招呼语。
 
-也可以用 `recruit --home <directory> --sites <sites.json> demo --port 4319` 指定数据目录、官网配置和端口。API Key 只在服务内存中保存。
+也可以用 `recruit --home <directory> --sites <sites.json> demo --port 4319` 指定数据目录、官网配置和端口。模型配置和 API Key 保存在本机数据目录，会话按 JSONL 保存；重启后可以恢复配置与历史会话，中断的操作不会自动重跑。
+
+### 自动构建与发布
+
+`main` 更新、Pull Request 和手动运行 CI 都会在 Linux 与 Windows 上执行格式、类型、单元测试、离线浏览器测试、CLI 冒烟和安装包检查。Linux 构建结果保留为 Actions 的 `cli-release` 附件。
+
+发布时一起更新 `package.json`、`package-lock.json` 和 CLI 的版本号，然后提交到 `main`。两套检查都通过后，CI 自动创建对应的 `vX.Y.Z` 标签与 GitHub Release，上传 npm 安装包和 SHA-256 校验文件。已发布的版本保持不变；新版本必须递增版本号。流程仅使用 GitHub 自带的令牌，不需要 npm 发布密钥。上传未完成时保留为草稿，同一提交重新运行 CI 可以完成发布。
+
+本地运行 `npm run pack:release` 可以生成相同格式的安装包与发布说明，文件位于被 Git 忽略的 `release-artifacts/`。
 
 ## 从源码运行对话 Demo
 
