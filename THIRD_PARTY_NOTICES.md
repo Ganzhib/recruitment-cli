@@ -11,3 +11,7 @@
 The Demo includes Marked (MIT, https://github.com/markedjs/marked) and DOMPurify (Apache-2.0 OR MPL-2.0, https://github.com/cure53/DOMPurify). Their browser modules and license files are copied from the installed dependencies into `dist/site/vendor/` and the static website build. No CDN is required.
 
 The AI status canvas uses the thinking-orbs engine (MIT © Jakub Antalik, https://github.com/Jakubantalik/thinking-orbs). Its license is distributed in the vendor directory. The host follows the upstream 20/64 presets, reduced-motion, visibility pausing and DPR guidance.
+
+## BOSS browser driver
+
+BOSS uses Patchright (Apache-2.0, https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-nodejs) as an npm runtime dependency for browser-driver compatibility. Other platforms use Playwright. Patchright's license is included in its published dependency package.

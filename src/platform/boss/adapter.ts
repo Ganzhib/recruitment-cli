@@ -2,7 +2,8 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { defineCapability, definePlatform, type Platform } from '../../core/platform.js';
 import { roleSchema, searchInputSchema } from '../../core/schemas.js';
-import { withBrowser, navigate, type BrowserRunner } from '../../runtime/browser.js';
+import { navigate, type BrowserRunner } from '../../runtime/browser.js';
+import { bossBrowser } from './browser.js';
 import { readJson, writeJson } from '../../runtime/storage.js';
 import { RecruitmentError } from '../../shared/errors.js';
 import {
@@ -22,7 +23,7 @@ export interface BossPlatformOptions {
   loginTimeoutMs?: number;
 }
 export function createBossPlatform(options: BossPlatformOptions = {}): Platform {
-  const browser = options.browser ?? withBrowser;
+  const browser = options.browser ?? bossBrowser;
   const capability = defineCapability<BossSession>();
   return definePlatform<BossSession>({
     id: 'boss',

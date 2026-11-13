@@ -98,8 +98,12 @@ export async function listPositions(session: BossSession) {
 export async function waitForBossLogin(
   context: BrowserContext,
   timeoutMs = 180_000,
+  options: { blankGraceMs?: number } = {},
 ): Promise<Page> {
   const deadline = Date.now() + timeoutMs;
+  const blankGraceMs = options.blankGraceMs ?? 2000;
+  let blankSince: number | undefined;
+  let recovered = false;
   let closed = false;
   const onClose = () => {
     closed = true;
@@ -112,10 +116,28 @@ export async function waitForBossLogin(
           'AUTH',
           '登录浏览器已关闭，扫码尚未完成。请重新打开登录窗口并保持到身份确认完成。',
         );
-      const page = context
-        .pages()
-        .find((candidate) => !candidate.isClosed() && roleFromUrl(candidate.url()));
+      const pages = context.pages().filter((candidate) => !candidate.isClosed());
+      const page = pages.find((candidate) => roleFromUrl(candidate.url()));
       if (page) return page;
+      // A short blank transition can occur during QR navigation. Recover only when
+      // no real page remains, and only once; never reload an active QR/verification page.
+      if (pages.every((candidate) => candidate.url() === 'about:blank')) {
+        blankSince ??= Date.now();
+        if (Date.now() - blankSince >= blankGraceMs) {
+          if (recovered)
+            throw new RecruitmentError(
+              'AUTH',
+              'BOSS 登录页再次变为空白页，已停止等待并释放本次登录任务。请检查浏览器或网络；本次未完成登录。',
+            );
+          recovered = true;
+          const loginPage = pages[0] ?? (await context.newPage());
+          await loginPage.bringToFront();
+          await navigate(loginPage, BOSS_LOGIN);
+          blankSince = undefined;
+        }
+      } else {
+        blankSince = undefined;
+      }
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     throw new RecruitmentError(
