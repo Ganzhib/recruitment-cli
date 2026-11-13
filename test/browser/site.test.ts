@@ -52,7 +52,7 @@ test('static demo declares simulated results, shows the workflow and offers loca
     await page.locator('[data-prompt]').last().click();
     await page.locator('.result-card').first().waitFor();
     assert.equal(await page.locator('.result-card').count(), 3);
-    assert.equal(await page.locator('.tool-card').count(), 3);
+    assert.equal(await page.locator('.tool-inline').count(), 3);
     assert.match(await page.locator('#messages').innerText(), /虚构示例/);
     await mkdir('test-results/screenshots', { recursive: true });
     await page.screenshot({ path: 'test-results/screenshots/demo.png' });
@@ -159,7 +159,7 @@ test('installation prompt is prominent and local demo requires a model before ch
     await page.locator('#message-input').fill('帮我自动打招呼');
     await page.locator('#send-button').click();
     assert.equal(await page.locator('#settings-dialog').isVisible(), true);
-    assert.equal(await page.locator('.tool-card').count(), 0);
+    assert.equal(await page.locator('.tool-inline').count(), 0);
     assert.equal(await page.locator('#messages').innerText(), '');
   });
 });
@@ -235,7 +235,7 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
       await page.waitForFunction(() =>
         document.querySelector('#mode-badge')?.textContent?.includes('fixture-model'),
       );
-      assert.equal(await page.locator('#activity-panel').isVisible(), false);
+      assert.equal(await page.locator('#activity-panel, #activity-toggle').count(), 0);
       assert.equal(await page.locator('#allow-contact').isChecked(), true);
       await page.locator('#allow-contact').uncheck();
       await page.locator('#message-input').fill('查找岗位');
@@ -285,11 +285,6 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
       );
       if (width === 1280)
         await page.screenshot({ path: 'test-results/screenshots/demo-markdown.png' });
-      await page.locator('#activity-toggle').click();
-      assert.equal(await page.locator('#activity-panel').isVisible(), true);
-      assert.equal(await page.locator('#activity-toggle').getAttribute('aria-expanded'), 'true');
-      await page.locator('#activity-toggle').click();
-      assert.equal(await page.locator('#activity-panel').isVisible(), false);
     }
   });
 });
