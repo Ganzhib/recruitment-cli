@@ -17,4 +17,8 @@
 
 运行 `npm test` 检查服务和业务行为，运行 `npm run test:browser` 检查页面。截图统一写入被 Git 忽略的 `test/screenshots/`，不是需要提交的测试基准图。
 
+`browser/boss-http.test.ts` 使用虚构登录和被拦截的 HTTP 客户端，验证接口会话保存、更新及不启动浏览器的岗位搜索。它不能证明真实 BOSS 账号可用。
+
+`live/boss-read.ts` 是显式执行的实站只读检查，不包含在默认测试中。运行 `npx tsx test/live/boss-read.ts` 会使用本机已有接口会话核对账号，再读取一页岗位；缺少会话立即停止，不启动浏览器、不发招呼、不输出凭据。可在命令后传入关键词和城市。
+
 提交前执行仓库要求的六项检查：`npm run format:check`、`npm run check`、`npm test`、`npm run test:browser`、`npm run smoke`、`npm run check:package`。`check:package` 在临时目录安装打包产物并验证 CLI、SDK 和 Demo，结束后清理临时目录。

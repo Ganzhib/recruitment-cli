@@ -149,6 +149,15 @@ interface JobCard {
   skills?: string[];
 }
 export async function searchJobs(session: BossSession, input: SearchInput): Promise<SearchPage> {
+  return searchJobsUsing(async (path, referer) => {
+    await navigate(session.page, referer);
+    return bossGet(session.page, path);
+  }, input);
+}
+export async function searchJobsUsing(
+  get: <T>(path: string, referer: string) => Promise<T>,
+  input: SearchInput,
+): Promise<SearchPage> {
   bossOptionsSchema.parse(input.options);
   const cities: Record<string, string> = {
     全国: '100010000',
@@ -175,10 +184,9 @@ export async function searchJobs(session: BossSession, input: SearchInput): Prom
     page: String(input.page),
     pageSize: '15',
   });
-  await navigate(session.page, BOSS_ORIGIN + '/web/geek/job?' + parameters);
-  const result = await bossGet<{ jobList: JobCard[]; hasMore: boolean }>(
-    session.page,
+  const result = await get<{ jobList: JobCard[]; hasMore: boolean }>(
     '/wapi/zpgeek/search/joblist.json?' + parameters,
+    BOSS_ORIGIN + '/web/geek/job?' + parameters,
   );
   return {
     hasMore: result.hasMore,

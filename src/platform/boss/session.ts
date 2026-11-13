@@ -35,24 +35,52 @@ export function assertBossUrl(value: string): string {
   return url.href;
 }
 export async function bossGet<T>(page: Page, path: string): Promise<T> {
-  const response = (await page.evaluate(async (path) => {
-    const result = await fetch(path, {
-      credentials: 'include',
-      headers: { 'X-Requested-With': 'XMLHttpRequest' },
-    });
-    if (!result.ok) return { httpError: result.status, envelope: null };
-    if (!result.headers.get('content-type')?.includes('json'))
-      return { httpError: 0, envelope: null };
-    return { httpError: 0, envelope: await result.json() };
-  }, path)) as { httpError: number; envelope: BossEnvelope<T> | null };
+  assertBossUrl(page.url());
+  const endpoint = new URL(assertBossUrl(new URL(path, BOSS_ORIGIN).href)).pathname;
+  const token = (await page.context().cookies(BOSS_ORIGIN)).find(
+    (cookie) => cookie.name === 'bst',
+  )?.value;
+  const response = (await page.evaluate(
+    async ({ path, token }) => {
+      const result = await fetch(path, {
+        credentials: 'include',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(token ? { zp_token: token } : {}),
+        },
+      });
+      if (!result.ok) return { httpError: result.status, envelope: null };
+      if (!result.headers.get('content-type')?.includes('json'))
+        return { httpError: 0, envelope: null };
+      return { httpError: 0, envelope: await result.json() };
+    },
+    { path, token },
+  )) as { httpError: number; envelope: BossEnvelope<T> | null };
   if (response.httpError || !response.envelope)
-    throw new RecruitmentError('NETWORK', '平台未返回可用的 JSON 响应。');
-  const envelope = response.envelope;
+    throw new RecruitmentError('NETWORK', '平台未返回可用的 JSON 响应。', {
+      endpoint,
+      ...(response.httpError ? { httpStatus: response.httpError } : {}),
+    });
+  return bossPayload(response.envelope, endpoint);
+}
+export function bossPayload<T>(envelope: BossEnvelope<T>, endpoint: string): T {
   if (envelope.code !== 0)
     throw new RecruitmentError(
       envelope.code === 37 ? 'AUTH' : 'PLATFORM',
       'BOSS 请求失败：' + envelope.message,
-      { platformCode: envelope.code },
+      {
+        platformCode: envelope.code,
+        endpoint,
+        reason: /环境.*异常/.test(envelope.message)
+          ? 'environment-rejected'
+          : envelope.code === 37
+            ? 'session-rejected'
+            : [121, 122].includes(envelope.code)
+              ? 'verification-required'
+              : envelope.code === 9
+                ? 'rate-limited'
+                : 'platform-error',
+      },
     );
   if (envelope.zpData === null) throw new RecruitmentError('PLATFORM', 'BOSS 成功响应缺少数据。');
   return envelope.zpData;
