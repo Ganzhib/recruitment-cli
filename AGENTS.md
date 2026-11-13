@@ -8,5 +8,5 @@
 - Trust typed internal contracts and successful protocol payloads. Validate user input, site configuration and persisted files at their boundaries. Keep optional checks only where the protocol or lifecycle requires them.
 - Keep cookies local and out of logs, fixtures, commits and generated artifacts. Offline browser tests intercept all requests and use fabricated profiles.
 - Use Prettier for standard TypeScript formatting. Run `npm run format:check`, `npm run check`, `npm test`, `npm run test:browser`, `npm run smoke` and `npm run check:package` before submitting.
-- Branches use `ganzhibin/<feature|bugfix|hotfix|refactor|chore|docs|test>/<english-description>`; inspect existing branches before creating one. Commits use `<type>(<scope>): <中文描述>`.
+- Work directly on `main` and submit changes there; do not create feature or bugfix branches unless explicitly requested. Commits use `<type>(<scope>): <中文描述>`.
 - Submit branches, commits and pull requests through the GitHub connector for this task. Do not use local Git to submit or push changes.

@@ -7,6 +7,92 @@ import { BOSS_ORIGIN } from '../../src/platform/boss/session.js';
 import { RecruitmentError } from '../../src/shared/errors.js';
 import { temporaryHome } from '../helpers.js';
 import { bossFixture } from './boss-fixture.js';
+import { fixtureBrowser } from './fixtures.js';
+import { waitForBossSearchReady } from '../../src/platform/boss/http-session.js';
+import { writeJson } from '../../src/runtime/storage.js';
+import { join } from 'node:path';
+
+test('login waits for the website to finish creating its search credential', async () =>
+  temporaryHome(async (home) => {
+    const browser = fixtureBrowser(async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === '/wapi/zpuser/wap/getUserInfo.json')
+        return route.fulfill({
+          json: { code: 0, zpData: { userId: 'delayed-user', name: 'Fixture' } },
+        });
+      if (path === '/web/user/')
+        return route.fulfill({
+          contentType: 'text/html',
+          body: '<script>location.href="/web/geek/job"</script>',
+        });
+      if (path === '/web/geek/job')
+        return route.fulfill({
+          contentType: 'text/html',
+          body: '<script>setTimeout(() => document.cookie="__zp_stoken__=fabricated-delayed; path=/", 400)</script>',
+        });
+      return route.abort();
+    });
+    const client = createRecruitmentClient({
+      home,
+      platforms: [createBossPlatform({ browser, loginTimeoutMs: 5000 })],
+    });
+    await client.login({ platform: 'boss' });
+    await client.accounts.use(await client.accounts.resolve('boss'), async (account) => {
+      const saved = await readBossHttpSession(account.directory);
+      assert.equal(
+        saved?.cookies.find((cookie) => cookie.name === '__zp_stoken__')?.value,
+        'fabricated-delayed',
+      );
+    });
+  }));
+
+test('a verification page is not treated as a search-ready session', async () => {
+  const browser = fixtureBrowser(async (route) =>
+    route.fulfill({ contentType: 'text/html', body: 'Verification pending' }),
+  );
+  await browser('', async (context, page) => {
+    await page.goto(BOSS_ORIGIN + '/web/passport/zp/security.html');
+    await context.addCookies([
+      { name: '__zp_stoken__', value: 'fabricated-old', url: BOSS_ORIGIN },
+    ]);
+    await assert.rejects(waitForBossSearchReady(context, 300), (error: unknown) => {
+      assert.ok(error instanceof RecruitmentError);
+      assert.equal(error.details?.reason, 'verification-required');
+      return true;
+    });
+    assert.equal(page.isClosed(), false);
+  });
+});
+
+test('an incomplete saved search session is refreshed through its normal browser before HTTP search', async (t) =>
+  temporaryHome(async (home) => {
+    const fixture = bossFixture('seeker');
+    fixture.mockHttp(t);
+    let browserVisits = 0;
+    const client = createRecruitmentClient({
+      home,
+      platforms: [
+        createBossPlatform({
+          browser: (directory, action) => {
+            browserVisits++;
+            return fixture.browser(directory, action);
+          },
+          loginTimeoutMs: 5000,
+        }),
+      ],
+    });
+    await client.login({ platform: 'boss' });
+    await client.accounts.use(await client.accounts.resolve('boss'), async (account) => {
+      const saved = (await readBossHttpSession(account.directory))!;
+      await writeJson(join(account.directory, 'http-session.json'), { ...saved, cookies: [] });
+    });
+    const result = await client.search(
+      { platform: 'boss' },
+      { query: 'TypeScript', activeWithin: 'any', maxPages: 1, limit: 1 },
+    );
+    assert.equal(result.targets[0].title, 'TypeScript 工程师');
+    assert.equal(browserVisits, 2);
+  }));
 
 test('normal login saves a local HTTP session; subsequent job search opens no browser and persists refreshed cookies', async (t) =>
   temporaryHome(async (home) => {

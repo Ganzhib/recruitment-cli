@@ -10,9 +10,10 @@ import { waitForBossLogin } from '../../src/platform/boss/session.js';
 import { temporaryHome } from '../helpers.js';
 
 for (const role of ['seeker', 'recruiter'] as const) {
-  test(`BOSS ${role}: QR landing identifies role, activity selection and native greeting produce a verified receipt`, async () =>
+  test(`BOSS ${role}: QR landing identifies role, activity selection and native greeting produce a verified receipt`, async (t) =>
     temporaryHome(async (home) => {
-      const { browser, state } = bossFixture(role);
+      const { browser, state, mockHttp } = bossFixture(role);
+      mockHttp(t);
       const client = createRecruitmentClient({
         home,
         platforms: [createBossPlatform({ browser, loginTimeoutMs: 5000 })],
@@ -42,9 +43,10 @@ for (const role of ['seeker', 'recruiter'] as const) {
       assert.equal(state.sends, 1);
     }));
 }
-test('BOSS skips a target whose activity becomes too old after planning', async () =>
+test('BOSS skips a target whose activity becomes too old after planning', async (t) =>
   temporaryHome(async (home) => {
-    const { browser, state } = bossFixture('seeker');
+    const { browser, state, mockHttp } = bossFixture('seeker');
+    mockHttp(t);
     const client = createRecruitmentClient({ home, platforms: [createBossPlatform({ browser })] });
     await client.login({ platform: 'boss' });
     const plan = await client.prepare({ platform: 'boss' }, { query: 'TypeScript' });

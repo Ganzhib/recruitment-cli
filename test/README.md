@@ -21,4 +21,6 @@
 
 `live/boss-read.ts` 是显式执行的实站只读检查，不包含在默认测试中。运行 `npx tsx test/live/boss-read.ts` 会使用本机已有接口会话核对账号，再读取一页岗位；缺少会话立即停止，不启动浏览器、不发招呼、不输出凭据。可在命令后传入关键词和城市。
 
+`live/boss-refresh.ts` 复用已绑定账号的浏览器档案，等待正常页面完成搜索会话验证，再保存凭证并只读搜索一页“前端 / 上海”岗位。若平台要求本人验证，由用户完成；脚本不会解算或绕过验证，也不会发送招呼。身份接口成功不代表搜索会话已经就绪。
+
 提交前执行仓库要求的六项检查：`npm run format:check`、`npm run check`、`npm test`、`npm run test:browser`、`npm run smoke`、`npm run check:package`。`check:package` 在临时目录安装打包产物并验证 CLI、SDK 和 Demo，结束后清理临时目录。

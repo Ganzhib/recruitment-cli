@@ -1,8 +1,10 @@
 import { fixtureBrowser } from './fixtures.js';
+import { request, type APIRequestContext, type Route } from 'playwright';
+import type { TestContext } from 'node:test';
 
 export function bossFixture(role: 'seeker' | 'recruiter') {
   const state = { sends: 0, userId: 'fixture-user', activity: '3日内活跃' };
-  const browser = fixtureBrowser(async (route) => {
+  const handle = async (route: Route) => {
     const url = new URL(route.request().url());
     const json = (zpData: unknown) => route.fulfill({ json: { code: 0, message: '', zpData } });
     const html = (body: string) =>
@@ -62,8 +64,39 @@ export function bossFixture(role: 'seeker' | 'recruiter') {
         `<div class="job-selecter-wrap"><div class="ui-dropmenu-label">TypeScript 工程师</div></div><div class="card-list"><article class="candidate-card-wrap"><div class="card-inner" data-geekid="geek-1"><div class="name-wrap"><span class="name">虚构候选人</span></div><div class="expect-wrap"><div class="content">北京 TypeScript 开发</div></div><span class="active-desc">${state.activity}</span></div><div class="button-chat-wrap"><button class="btn btn-greet" onclick="fetch('/wapi/zpjob/chat/start',{method:'POST',body:'geekId=geek-1&jobId=position-1'}).then(()=>this.textContent='继续沟通')">打招呼</button></div></article></div><div class="no-more">没有更多了</div>`,
       );
     if (url.pathname === '/web/geek/job' || url.pathname === '/web/chat/index')
-      return html('<main>测试主页</main>');
+      return html(
+        '<script>document.cookie="__zp_stoken__=fabricated-search-session; path=/"</script><main>测试主页</main>',
+      );
     return route.abort();
-  });
-  return { browser, state };
+  };
+  const browser = fixtureBrowser(handle);
+  const mockHttp = (t: TestContext) => {
+    t.mock.method(
+      request,
+      'newContext',
+      async (options: Parameters<typeof request.newContext>[0]) =>
+        ({
+          get: async (url: string) => {
+            let data: unknown;
+            await handle({
+              request: () => ({ url: () => url }),
+              fulfill: async (response: { json: unknown }) => {
+                data = response.json;
+              },
+              abort: async () => {
+                throw new Error('Unexpected offline BOSS request');
+              },
+            } as unknown as Route);
+            return {
+              ok: () => true,
+              headers: () => ({ 'content-type': 'application/json' }),
+              json: async () => data,
+            };
+          },
+          storageState: async () => options!.storageState,
+          dispose: async () => {},
+        }) as unknown as APIRequestContext,
+    );
+  };
+  return { browser, state, mockHttp };
 }

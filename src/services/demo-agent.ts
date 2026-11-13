@@ -78,7 +78,13 @@ export async function runDemoAgent(options: {
           options.policy,
         );
       } catch (error) {
-        result = { ok: false, error: error instanceof Error ? error.message : String(error) };
+        result = {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+          ...(error instanceof RecruitmentError
+            ? { code: error.code, details: error.details }
+            : {}),
+        };
       }
       messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
     }

@@ -28,7 +28,7 @@ test('BOSS compatible driver identifies a fabricated account through the shared 
           if (url.pathname === '/web/geek/job')
             return route.fulfill({
               contentType: 'text/html',
-              body: '<main>Fabricated home</main>',
+              body: '<script>document.cookie="__zp_stoken__=fabricated-search-session; path=/"</script><main>Fabricated home</main>',
             });
           if (url.pathname === '/wapi/zpuser/wap/getUserInfo.json')
             return route.fulfill({

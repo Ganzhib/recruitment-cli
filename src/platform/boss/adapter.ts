@@ -27,6 +27,8 @@ import {
   identifyHttp,
   readBossHttpSession,
   saveBossHttpSession,
+  hasBossSearchToken,
+  waitForBossSearchReady,
 } from './http-session.js';
 import { prepareContact, sendContact } from './outreach.js';
 
@@ -106,7 +108,9 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
     login: (directory) =>
       browser(directory, async (context, page) => {
         await navigate(page, BOSS_LOGIN);
-        const authenticatedPage = await waitForBossLogin(context, options.loginTimeoutMs);
+        let authenticatedPage = await waitForBossLogin(context, options.loginTimeoutMs);
+        if (new URL(authenticatedPage.url()).pathname.startsWith('/web/geek/'))
+          authenticatedPage = await waitForBossSearchReady(context, options.loginTimeoutMs);
         const profile = await identify(authenticatedPage);
         await writeJson(join(directory, 'session.json'), { role: profile.role });
         await saveBossHttpSession(directory, context, authenticatedPage, profile);
@@ -114,25 +118,59 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
       }),
     withSession: async (account, action) => {
       if (!account) throw new RecruitmentError('AUTH', 'BOSS 需要先扫码登录。');
-      const http = await readBossHttpSession(account.directory);
+      let http = await readBossHttpSession(account.directory);
+      if (http?.profile.role === 'seeker' && !hasBossSearchToken(http.cookies)) {
+        await browser(account.directory, async (context, page) => {
+          await openHome(page, 'seeker');
+          const ready = await waitForBossSearchReady(context, options.loginTimeoutMs);
+          const actual = await identify(ready);
+          if (actual.id !== account.identity.accountId)
+            throw new RecruitmentError('AUTH', '浏览器账号已变化，未覆盖原会话。');
+          await saveBossHttpSession(account.directory, context, ready, actual);
+        });
+        http = await readBossHttpSession(account.directory);
+      }
       if (http) {
         const profile = await identifyHttp(account.directory, http);
-        return action({
-          profile,
-          httpDirectory: account.directory,
-          browser: (run) =>
-            browser(account.directory, async (context, page) => {
-              const current = await readBossHttpSession(account.directory);
-              if (current) await context.addCookies(current.cookies);
-              await openHome(page, profile.role);
-              const actual = await identify(page);
-              if (actual.id !== profile.id || actual.role !== profile.role)
-                throw new RecruitmentError('AUTH', '浏览器账号或身份已变化，操作已停止。');
-              const result = await run({ profile: actual, page });
-              await saveBossHttpSession(account.directory, context, page, actual);
-              return result;
-            }),
-        });
+        let ready: Promise<BossSession> | undefined;
+        let lifetime: Promise<void> | undefined;
+        let release: (() => void) | undefined;
+        const getBrowser = () => {
+          if (ready) return ready;
+          let opened!: (session: BossSession) => void;
+          let failed!: (error: unknown) => void;
+          ready = new Promise<BossSession>((resolve, reject) => {
+            opened = resolve;
+            failed = reject;
+          });
+          const finished = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          lifetime = browser(account.directory, async (context, page) => {
+            const current = await readBossHttpSession(account.directory);
+            if (current) await context.addCookies(current.cookies);
+            await openHome(page, profile.role);
+            const actual = await identify(page);
+            if (actual.id !== profile.id || actual.role !== profile.role)
+              throw new RecruitmentError('AUTH', '浏览器账号或身份已变化，操作已停止。');
+            opened({ profile: actual, page });
+            await finished;
+            await saveBossHttpSession(account.directory, context, page, actual);
+          });
+          // Observe startup failure immediately; the lifetime is also awaited on cleanup.
+          void lifetime.catch(failed);
+          return ready;
+        };
+        try {
+          return await action({
+            profile,
+            httpDirectory: account.directory,
+            browser: async (run) => run(await getBrowser()),
+          });
+        } finally {
+          release?.();
+          await lifetime;
+        }
       }
       // Existing browser-only sessions are migrated after a normal identity check.
       return browser(account.directory, async (context, page) => {
@@ -140,9 +178,13 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
           .object({ role: roleSchema })
           .parse(await readJson(join(account.directory, 'session.json')));
         await openHome(page, saved.role);
-        const profile = await identify(page);
-        await saveBossHttpSession(account.directory, context, page, profile);
-        return action({ profile, browser: (run) => run({ profile, page }) });
+        const ready =
+          saved.role === 'seeker'
+            ? await waitForBossSearchReady(context, options.loginTimeoutMs)
+            : page;
+        const profile = await identify(ready);
+        await saveBossHttpSession(account.directory, context, ready, profile);
+        return action({ profile, browser: (run) => run({ profile, page: ready }) });
       });
     },
   });

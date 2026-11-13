@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { profileSchema, type AccountProfile } from '../../core/schemas.js';
 import { readJson, writeJson } from '../../runtime/storage.js';
 import { RecruitmentError } from '../../shared/errors.js';
-import { assertBossUrl, bossPayload, BOSS_ORIGIN } from './session.js';
+import { assertBossUrl, bossPayload, BOSS_ORIGIN, roleFromUrl } from './session.js';
 
 const domains = ['www.zhipin.com', '.www.zhipin.com', 'zhipin.com', '.zhipin.com'];
 const cookieSchema = z.object({
@@ -25,6 +25,39 @@ const httpSessionSchema = z.object({
 });
 type HttpSession = z.infer<typeof httpSessionSchema>;
 const sessionPath = (directory: string) => join(directory, 'http-session.json');
+
+export function hasBossSearchToken(cookies: HttpSession['cookies']): boolean {
+  return cookies.some(
+    (cookie) =>
+      cookie.name === '__zp_stoken__' &&
+      cookie.value &&
+      (cookie.expires === -1 || cookie.expires > Date.now() / 1000),
+  );
+}
+
+// Identity can succeed before the normal website finishes its search-session
+// verification. Keep that page alive; never generate or solve the verification.
+export async function waitForBossSearchReady(
+  context: BrowserContext,
+  timeoutMs = 180000,
+): Promise<Page> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const pages = context.pages().filter((page) => !page.isClosed());
+    if (!pages.length) throw new RecruitmentError('AUTH', 'BOSS 验证窗口已关闭。');
+    const page = pages.find((candidate) => roleFromUrl(candidate.url()) === 'seeker');
+    if (page && hasBossSearchToken(await context.cookies(BOSS_ORIGIN))) return page;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new RecruitmentError(
+    'AUTH',
+    'BOSS 身份已识别，但网页搜索验证尚未完成。请完成页面验证后重试。',
+    {
+      reason: 'verification-required',
+      missingSessionCookies: ['__zp_stoken__'],
+    },
+  );
+}
 
 export async function readBossHttpSession(directory: string): Promise<HttpSession | undefined> {
   const saved = await readJson(sessionPath(directory)).catch((error) => {
