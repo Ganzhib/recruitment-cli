@@ -204,3 +204,56 @@ for (const scenario of ['allowed', 'denied', 'uncertain'] as const) {
       }
     }));
 }
+
+test('streamed tool arguments are assembled before execution and text deltas reach the UI', async () =>
+  temporaryHome(async (home) => {
+    let round = 0;
+    const model = createServer(async (request, response) => {
+      for await (const _chunk of request) {
+        /* drain request */
+      }
+      response.setHeader('Content-Type', 'text/event-stream');
+      const deltas =
+        round++ === 0
+          ? [
+              { reasoning_content: 'fixture-private-reasoning' },
+              {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: 'call-stream',
+                    function: { name: 'recruit_platforms', arguments: '{' },
+                  },
+                ],
+              },
+              { tool_calls: [{ index: 0, function: { arguments: '}' } }] },
+            ]
+          : [{ content: '## 平台' }, { content: '\n\n测试平台' }];
+      for (const delta of deltas)
+        response.write('data: ' + JSON.stringify({ choices: [{ delta }] }) + '\r\n\r\n');
+      response.end('data: [DONE]\n\n');
+    });
+    const endpoint = await serve(model);
+    const { platform } = fakePlatform();
+    const demo = createDemoServer({
+      client: createRecruitmentClient({ home, platforms: [platform] }),
+      config: { baseUrl: endpoint, model: 'fixture-model', apiKey: '' },
+    });
+    const base = await serve(demo);
+    try {
+      const response = await fetch(base + '/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message: '列出平台' }),
+      });
+      const events = await response.text();
+      assert.match(events, /"phase":"thinking"/);
+      assert.match(events, /tool.result/);
+      assert.match(events, /message.delta/);
+      assert.match(events, /"type":"done"/);
+      assert.equal(events.includes('fixture-private-reasoning'), false);
+      assert.equal(round, 2);
+    } finally {
+      await close(demo);
+      await close(model);
+    }
+  }));

@@ -7,21 +7,28 @@
     <title>demo · Recruitment CLI</title>
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="demo.css" />
-    <script src="demo.js" defer></script>
+    <script type="module" src="demo.js"></script>
   </head>
-  <body>
+  <body class="quiet-demo">
     <div class="demo-shell">
       <aside class="sidebar">
         <a class="brand" href="../index.html"
           ><span class="brand-mark">r.</span
           ><span>recruitment<span class="brand-sub">demo / 对话工作台</span></span></a
         >
-        <button class="new-chat" id="new-chat"><span>＋</span> 新对话</button>
+        <button class="new-chat" id="new-chat" aria-label="新对话" title="新对话">
+          <span>＋</span> 新对话
+        </button>
         <p class="rail-label">从一个场景开始</p>
-        <button class="scenario selected" data-scenario="seeker">
+        <button
+          class="scenario selected"
+          data-scenario="seeker"
+          aria-label="寻找机会"
+          title="寻找机会"
+        >
           <span>↗</span><span>寻找下一份机会<small>求职者工作流</small></span>
         </button>
-        <button class="scenario" data-scenario="recruiter">
+        <button class="scenario" data-scenario="recruiter" aria-label="寻找人才" title="寻找人才">
           <span>⌕</span><span>遇见合适的人<small>招聘者工作流</small></span>
         </button>
         <div class="rail-note">
@@ -45,19 +52,27 @@
         <header class="chat-header">
           <div>
             <span class="eyebrow">YOUR NEXT CONVERSATION</span>
-            <h1>与机会，对上话。</h1>
+            <h1>招聘助手</h1>
           </div>
           <div class="header-actions">
+            <button
+              class="outline-button"
+              id="activity-toggle"
+              aria-expanded="false"
+              aria-controls="activity-panel"
+            >
+              执行过程 <span id="activity-total">0</span>
+            </button>
             <span class="mode-badge" id="mode-badge">交互演示 · 虚构数据</span
             ><button class="outline-button" id="settings-open">连接 Agent <span>↗</span></button>
           </div>
         </header>
         <div class="chat-scroll" id="chat-scroll">
           <section class="welcome" id="welcome">
-            <span class="welcome-icon">r.</span>
+            <canvas id="welcome-orb" role="img" aria-label="等待你的需求"></canvas>
             <p class="eyebrow">LESS REPETITION. MORE CONNECTION.</p>
-            <h2>下一段对话，<br />从这里开始。</h2>
-            <p>说出你期待的机会，或你正在寻找的人。<br />筛选、整理、沟通，让每一步都更清楚。</p>
+            <h2>你想找什么机会？</h2>
+            <p>说出岗位、城市和数量，剩下的交给助手。</p>
             <div class="starter-grid">
               <button
                 data-role="seeker"
@@ -75,10 +90,20 @@
           <div class="messages" id="messages" aria-live="polite"></div>
         </div>
         <div class="composer-wrap">
+          <div
+            id="agent-status"
+            class="agent-status"
+            role="status"
+            aria-live="polite"
+            data-phase="idle"
+          >
+            <canvas id="status-orb" role="img" aria-label="就绪"></canvas
+            ><span id="agent-status-label">就绪</span>
+          </div>
           <div class="context-bar">
             <span><span class="status-dot"></span> <b id="context-role">求职者示例</b></span
             ><label id="permission-label" hidden
-              ><input type="checkbox" id="allow-contact" /> 允许发起沟通</label
+              ><input type="checkbox" id="allow-contact" /> 本轮允许打招呼</label
             ><label id="platform-label" hidden
               >平台
               <select id="platform">
@@ -86,10 +111,15 @@
               </select></label
             ><span class="sample-label" id="sample-label">示例不连接真实账号</span>
           </div>
-          <div id="live-actions" hidden>
-            <button type="button" class="outline-button" id="login-account">扫码登录 BOSS</button>
-            <button type="button" class="outline-button" id="auto-greet">准备自动打招呼指令</button>
-          </div>
+          <details id="live-actions" hidden>
+            <summary>更多操作</summary>
+            <div class="live-action-menu">
+              <button type="button" class="outline-button" id="login-account">扫码登录 BOSS</button>
+              <button type="button" class="outline-button" id="auto-greet">
+                准备自动打招呼指令
+              </button>
+            </div>
+          </details>
           <form id="chat-form" class="composer">
             <textarea
               id="message-input"
@@ -108,11 +138,11 @@
           </p>
         </div>
       </main>
-      <aside class="activity-panel">
+      <aside class="activity-panel" id="activity-panel" hidden>
         <header>
           <div>
             <span class="eyebrow">ACTION, IN VIEW</span>
-            <h2>每一步，都看得见。</h2>
+            <h2>执行过程</h2>
           </div>
           <span class="activity-count" id="activity-count">0</span>
         </header>

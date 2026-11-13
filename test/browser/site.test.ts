@@ -163,3 +163,119 @@ test('installation prompt is prominent and local demo requires a model before ch
     assert.equal(await page.locator('#messages').innerText(), '');
   });
 });
+
+test('live demo renders safe Markdown, follows stream states and keeps process details collapsed', async () => {
+  const markdown = [
+    '## 匹配结果',
+    '',
+    '**已找到 2 个岗位**，使用 `recruit` 查看。',
+    '',
+    '| 岗位 | 城市 |',
+    '| --- | --- |',
+    '| 前端 | 上海 |',
+    '',
+    '- TypeScript',
+    '- React',
+    '',
+    '```js',
+    'const greeting = "hello";',
+    '```',
+    '',
+    '[文档](https://example.test/docs)',
+    '<img src="https://attacker.example/pixel" onerror="window.markdownAttack=1">',
+    '<script>window.markdownAttack=1</script>',
+    '[危险链接](javascript:alert(1))',
+  ].join('\n');
+  const local = fixtureBrowser(async (route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname !== '127.0.0.1') return route.abort();
+    if (url.pathname === '/api/config')
+      return route.fulfill({ json: { configured: true, model: 'fixture-model' } });
+    if (url.pathname === '/api/chat')
+      return route.fulfill({
+        contentType: 'text/event-stream',
+        body: [
+          { type: 'status', phase: 'thinking' },
+          {
+            type: 'tool.start',
+            id: 'fixture-call',
+            name: 'recruit_search',
+            command: 'recruit search TypeScript',
+            input: {},
+          },
+          {
+            type: 'tool.result',
+            id: 'fixture-call',
+            name: 'recruit_search',
+            result: { matched: 2 },
+          },
+          { type: 'status', phase: 'composing' },
+          { type: 'message.delta', id: 'reply-1', delta: markdown.slice(0, 30) },
+          { type: 'message.delta', id: 'reply-1', delta: markdown.slice(30) },
+          { type: 'done' },
+        ]
+          .map((event) => 'data: ' + JSON.stringify(event) + '\n\n')
+          .join(''),
+      });
+    const name = url.pathname === '/demo/' ? 'demo/index.html' : url.pathname.slice(1);
+    return route.fulfill({
+      body: await readFile(resolve('site', name)),
+      contentType: name.endsWith('.html')
+        ? 'text/html'
+        : name.endsWith('.js')
+          ? 'text/javascript'
+          : 'text/css',
+    });
+  });
+  await local('', async (_context, page) => {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 850 });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto('http://127.0.0.1:4318/demo/');
+      await page.waitForFunction(() =>
+        document.querySelector('#mode-badge')?.textContent?.includes('fixture-model'),
+      );
+      assert.equal(await page.locator('#activity-panel').isVisible(), false);
+      await page.locator('#message-input').fill('查找岗位');
+      await page.locator('#send-button').click();
+      await page.waitForFunction(
+        () => document.querySelector('#agent-status')?.getAttribute('data-phase') === 'done',
+      );
+      assert.equal(await page.locator('.markdown h2').innerText(), '匹配结果');
+      assert.equal(await page.locator('.message-avatar, .message-label').count(), 0);
+      assert.equal(
+        await page.locator('.message.user').evaluate((row) => getComputedStyle(row).justifyContent),
+        'flex-end',
+      );
+      assert.equal(await page.locator('.markdown table tbody tr').count(), 1);
+      assert.equal(
+        await page.locator('.markdown pre code').innerText(),
+        'const greeting = "hello";\n',
+      );
+      assert.equal(
+        await page
+          .locator(
+            '.markdown script, .markdown img, .markdown [onerror], .markdown a[href^="javascript:"]',
+          )
+          .count(),
+        0,
+      );
+      assert.equal(
+        await page.locator('.markdown a[href="https://example.test/docs"]').getAttribute('rel'),
+        'noopener noreferrer',
+      );
+      assert.equal(await page.locator('#status-orb').getAttribute('data-state'), 'breathing');
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      );
+      if (width === 1280)
+        await page.screenshot({ path: 'test-results/screenshots/demo-markdown.png' });
+      await page.locator('#activity-toggle').click();
+      assert.equal(await page.locator('#activity-panel').isVisible(), true);
+      assert.equal(await page.locator('#activity-toggle').getAttribute('aria-expanded'), 'true');
+      await page.locator('#activity-toggle').click();
+      assert.equal(await page.locator('#activity-panel').isVisible(), false);
+    }
+  });
+});

@@ -5,3 +5,9 @@
 - [joohw/boss-cli](https://github.com/joohw/boss-cli)，GPL-3.0：作为 BOSS 招聘页面结构、选择器名称与原生沟通流程的研究参考。没有复制、分发该项目的实现代码、打包产物或反检测逻辑。
 
 以上项目不是本包的运行时依赖。本项目不复制开源项目的安全校验绕过、浏览器指纹修改或验证码处理逻辑。第三方 npm 依赖遵循各自发布包中的许可。
+
+## Demo Markdown renderer
+
+The Demo includes Marked (MIT, https://github.com/markedjs/marked) and DOMPurify (Apache-2.0 OR MPL-2.0, https://github.com/cure53/DOMPurify). Their browser modules and license files are copied from the installed dependencies into `dist/site/vendor/` and the static website build. No CDN is required.
+
+The AI status canvas uses the thinking-orbs engine (MIT © Jakub Antalik, https://github.com/Jakubantalik/thinking-orbs). Its license is distributed in the vendor directory. The host follows the upstream 20/64 presets, reduced-motion, visibility pausing and DPR guidance.

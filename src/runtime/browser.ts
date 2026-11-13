@@ -37,10 +37,14 @@ export const withBrowser: BrowserRunner = async (directory, action) => {
   const context = await chromium.launchPersistentContext(join(directory, 'browser-profile'), {
     executablePath: await browserExecutable(),
     headless: false,
+    chromiumSandbox: true,
     viewport: { width: 1440, height: 1000 },
   });
   try {
-    const page = context.pages()[0] ?? (await context.newPage());
+    const page = await context.newPage();
+    for (const startup of context.pages()) {
+      if (startup !== page && startup.url() === 'about:blank') await startup.close();
+    }
     page.setDefaultTimeout(20_000);
     return await action(context, page);
   } finally {

@@ -1,3 +1,4 @@
+import './prepare-site.mjs';
 import { spawnSync } from 'node:child_process';
 import { chmod, cp } from 'node:fs/promises';
 import { createRequire } from 'node:module';

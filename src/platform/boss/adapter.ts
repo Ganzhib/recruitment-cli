@@ -7,6 +7,7 @@ import { readJson, writeJson } from '../../runtime/storage.js';
 import { RecruitmentError } from '../../shared/errors.js';
 import {
   BOSS_LOGIN,
+  waitForBossLogin,
   bossOptionsSchema,
   identify,
   listPositions,
@@ -72,15 +73,10 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
       }),
     ],
     login: (directory) =>
-      browser(directory, async (_context, page) => {
+      browser(directory, async (context, page) => {
         await navigate(page, BOSS_LOGIN);
-        await page.waitForURL(
-          (url) =>
-            url.origin === 'https://www.zhipin.com' &&
-            /^\/web\/(geek|chat)(\/|$)/.test(url.pathname),
-          { timeout: options.loginTimeoutMs ?? 180_000 },
-        );
-        const profile = await identify(page);
+        const authenticatedPage = await waitForBossLogin(context, options.loginTimeoutMs);
+        const profile = await identify(authenticatedPage);
         await writeJson(join(directory, 'session.json'), { role: profile.role });
         return profile;
       }),

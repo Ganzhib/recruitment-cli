@@ -2,7 +2,7 @@ name: GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'scripts/build-site.mjs', '.github/workflows/pages.yml']
+    paths: ['site/**', 'scripts/**', 'package*.json', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - uses: actions/configure-pages@v5
       - run: node scripts/build-site.mjs
       - uses: actions/upload-pages-artifact@v4

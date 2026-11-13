@@ -1,3 +1,7 @@
+import { marked } from '../vendor/marked.js';
+import DOMPurify from '../vendor/purify.js';
+import { createOrb } from './orb.js';
+
 const $ = (selector) => document.querySelector(selector);
 const state = {
   local: false,
@@ -19,6 +23,36 @@ const names = {
   recruit_run_plan: '执行沟通计划',
   recruit_history: '核对沟通回执',
 };
+const statusOrb = createOrb($('#status-orb'));
+const welcomeOrb = createOrb($('#welcome-orb'), 64);
+welcomeOrb.set('breathing', '等待你的需求', false);
+function status(phase, label) {
+  if ($('#agent-status').dataset.phase === phase && $('#agent-status-label').textContent === label)
+    return;
+  const modes = {
+    idle: 'breathing',
+    thinking: 'solving',
+    connecting: 'connecting',
+    tool: 'working',
+    searching: 'searching',
+    composing: 'composing',
+    done: 'breathing',
+    error: 'breathing',
+  };
+  $('#agent-status').dataset.phase = phase;
+  $('#agent-status-label').textContent = label;
+  statusOrb.set(modes[phase] ?? 'working', label, !['idle', 'done', 'error'].includes(phase));
+}
+$('#activity-toggle').addEventListener('click', () => {
+  const open = $('#activity-panel').hidden;
+  $('#activity-panel').hidden = !open;
+  document.body.classList.toggle('activity-open', open);
+  $('#activity-toggle').setAttribute('aria-expanded', String(open));
+});
+window.addEventListener('pagehide', () => {
+  statusOrb.destroy();
+  welcomeOrb.destroy();
+});
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -28,19 +62,65 @@ function element(tag, className, text) {
 function scrollChat() {
   $('#chat-scroll').scrollTop = $('#chat-scroll').scrollHeight;
 }
+function renderMarkdown(body, text) {
+  body.classList.add('markdown');
+  body.innerHTML = DOMPurify.sanitize(
+    marked.parse(text, { gfm: true, breaks: true, async: false }),
+    {
+      ALLOWED_TAGS: [
+        'p',
+        'br',
+        'strong',
+        'em',
+        'del',
+        'blockquote',
+        'ul',
+        'ol',
+        'li',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'pre',
+        'code',
+        'a',
+        'hr',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
+      ],
+      ALLOWED_ATTR: ['href', 'title', 'start'],
+    },
+  );
+  body.querySelectorAll('a[href]').forEach((link) => {
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  });
+  body.querySelectorAll('table').forEach((table) => {
+    const wrapper = element('div', 'markdown-table');
+    wrapper.tabIndex = 0;
+    wrapper.setAttribute('role', 'region');
+    wrapper.setAttribute('aria-label', '表格，可横向滚动');
+    table.replaceWith(wrapper);
+    wrapper.append(table);
+  });
+}
 function message(role, text) {
   $('#welcome').hidden = true;
   const row = element('article', 'message ' + role);
-  row.append(element('div', 'message-avatar', role === 'user' ? '你' : 'r.'));
   const content = element('div');
-  content.append(
-    element(
-      'div',
-      'message-label',
-      role === 'user' ? '你' : state.configured ? '招聘助手' : '预设流程演示',
-    ),
-  );
-  content.append(element('div', 'message-content', text));
+  const body = element('div', 'message-content');
+  if (role === 'assistant') {
+    renderMarkdown(body, text);
+  } else {
+    body.textContent = text;
+  }
+  content.append(body);
   row.append(content);
   $('#messages').append(row);
   scrollChat();
@@ -92,6 +172,15 @@ function tool(event) {
     state.tools.set(event.id, card);
     $('#activity-list').append(card);
     $('#activity-count').textContent = String(state.tools.size);
+    $('#activity-total').textContent = String(state.tools.size);
+    status(
+      event.name.includes('search')
+        ? 'searching'
+        : event.name.includes('login')
+          ? 'connecting'
+          : 'tool',
+      names[event.name] || '正在执行',
+    );
   } else {
     const card = state.tools.get(event.id);
     if (!card) return;
@@ -120,6 +209,8 @@ function reset() {
   $('#messages').replaceChildren();
   $('#activity-list').replaceChildren();
   $('#activity-count').textContent = '0';
+  $('#activity-total').textContent = '0';
+  status('idle', '就绪');
   $('#activity-empty').hidden = false;
   $('#welcome').hidden = false;
 }
@@ -255,6 +346,10 @@ async function chat(text) {
     throw new Error(problem.error);
   }
   const reader = response.body.getReader();
+  let complete = false;
+  let currentMessage;
+  let currentText = '';
+  let currentId;
   const decoder = new TextDecoder();
   let buffer = '';
   while (true) {
@@ -268,11 +363,33 @@ async function chat(text) {
       if (!frame.startsWith('data: ')) continue;
       const event = JSON.parse(frame.slice(6));
       if (event.type === 'session') state.conversationId = event.conversationId;
-      if (event.type === 'message') message('assistant', event.content);
+      if (event.type === 'status')
+        status(event.phase, event.phase === 'composing' ? '正在输出' : '正在思考');
+      if (event.type === 'message.delta') {
+        status('composing', '正在输出');
+        if (currentId !== event.id) {
+          currentId = event.id;
+          currentText = '';
+          currentMessage = message('assistant', '').querySelector('.message-content');
+        }
+        currentText += event.delta;
+        renderMarkdown(currentMessage, currentText);
+        scrollChat();
+      }
+      if (event.type === 'message') {
+        status('composing', '正在输出');
+        message('assistant', event.content);
+      }
+      if (event.type === 'done') {
+        complete = true;
+        status('done', '已完成');
+      }
+
       if (event.type.startsWith('tool.')) tool(event);
-      if (event.type === 'error') message('error', event.message);
+      if (event.type === 'error') throw new Error(event.message);
     }
   }
+  if (!complete) throw new Error('连接已中断，请先核对执行记录。');
 }
 async function submit(text) {
   if (!text.trim() || state.busy) return;
@@ -281,12 +398,17 @@ async function submit(text) {
     return;
   }
   state.busy = true;
+  status('thinking', state.configured ? '正在思考' : '正在演示');
   $('#send-button').disabled = true;
   $('#message-input').value = '';
   try {
     if (state.configured) await chat(text.trim());
-    else await sample(text.trim());
+    else {
+      await sample(text.trim());
+      status('done', '示例已完成');
+    }
   } catch (error) {
+    status('error', '需要处理');
     message('error', error.message);
   } finally {
     state.busy = false;
@@ -346,10 +468,9 @@ function connected(model) {
   $('#context-role').textContent = '真实 Agent · BOSS 直聘';
   $('#permission-label').hidden = false;
   $('#live-actions').hidden = false;
-  $('#platform-label').hidden = false;
+  $('#platform-label').hidden = true;
   $('#sample-label').hidden = true;
-  $('#composer-note').textContent =
-    '工具调用由真实 Agent 决定。开启权限前只读取与准备计划，不发起沟通。';
+  $('#composer-note').hidden = true;
 }
 async function initialize() {
   state.local = location.hostname === '127.0.0.1';

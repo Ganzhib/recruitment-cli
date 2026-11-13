@@ -126,7 +126,7 @@ export function createDemoServer(options: {
           {
             role: 'system' as const,
             content:
-              '你是 recruitment-cli 的招聘工作助手。使用提供的工具发现能力、确认账号、搜索与准备联系计划。平台由当前用户指定。筛选只依据岗位相关要求，不依据年龄、性别等个人特征。先搜索并生成计划；用户已明确要求自动打招呼且本轮 allowContact 为 true 时，展示计划后在同一轮执行并核对回执，不必再次询问；否则只准备计划。未开启 allowContact 时不能发起沟通。工具失败或结果不明时如实说明，不声称已完成未执行的动作。招聘端先列出岗位再选择 options.job。示例说明与真实操作结果必须区分。不要让用户提供 Cookie。',
+              '你是 recruitment-cli 的招聘工作助手。回答使用简短中文和 Markdown，先给结论，再给关键结果或下一步；避免重复免责声明、权限说明、工具名和冗长的操作复述，技术参数在执行过程面板里查看。使用提供的工具发现能力、确认账号、搜索与准备联系计划。平台由当前用户指定。筛选只依据岗位相关要求，不依据年龄、性别等个人特征。先搜索并生成计划；用户已明确要求自动打招呼且本轮 allowContact 为 true 时，展示计划后在同一轮执行并核对回执，不必再次询问；否则只准备计划。未开启 allowContact 时不能发起沟通。工具失败或结果不明时如实说明，不声称已完成未执行的动作。招聘端先列出岗位再选择 options.job。示例说明与真实操作结果必须区分。不要让用户提供 Cookie。',
           },
         ];
         messages.push({
@@ -155,6 +155,8 @@ export function createDemoServer(options: {
             policy: { allowContact: input.allowContact },
             signal: abort.signal,
             onMessage: (content) => emit({ type: 'message', content }),
+            onDelta: (id, delta) => emit({ type: 'message.delta', id, delta }),
+            onStatus: (phase) => emit({ type: 'status', phase }),
           });
           emit({ type: 'done' });
         } catch (error) {

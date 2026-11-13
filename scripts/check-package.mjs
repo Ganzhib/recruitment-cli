@@ -28,6 +28,10 @@ try {
     'dist/services/demo-agent.js',
     'dist/site/demo/index.html',
     'dist/site/demo/demo.js',
+    'dist/site/vendor/marked.js',
+    'dist/site/vendor/purify.js',
+    'dist/site/vendor/thinking-orbs/engine.es.js',
+    'dist/site/demo/orb.js',
     'README.md',
     'LICENSE',
   ])
@@ -114,14 +118,25 @@ try {
       });
     });
     const base = `http://127.0.0.1:${port}`;
-    for (const path of ['/demo/', '/demo/demo.js', '/demo/demo.css', '/index.html']) {
+    for (const path of [
+      '/demo/',
+      '/demo/demo.js',
+      '/demo/demo.css',
+      '/vendor/marked.js',
+      '/vendor/purify.js',
+      '/vendor/thinking-orbs/engine.es.js',
+      '/demo/orb.js',
+      '/index.html',
+    ]) {
       assert.equal((await fetch(base + path)).status, 200, path);
     }
     assert.equal((await (await fetch(base + '/api/tools')).json()).tools.length > 0, true);
   } finally {
-    const exited = new Promise((resolve) => demo.once('exit', resolve));
-    demo.kill();
-    await exited;
+    if (demo.exitCode === null && demo.signalCode === null) {
+      const exited = new Promise((resolve) => demo.once('exit', resolve));
+      demo.kill();
+      await exited;
+    }
   }
   console.log(`Packaged CLI and root SDK imports passed (${files.length} files).`);
 } finally {
