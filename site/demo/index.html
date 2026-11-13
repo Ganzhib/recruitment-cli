@@ -17,7 +17,8 @@
           ><span>recruitment<span class="brand-sub">demo / 对话工作台</span></span></a
         >
         <button class="new-chat" id="new-chat" aria-label="新建会话" title="新建会话">
-          <span>＋</span> 新建会话
+          <span class="new-chat-icon" aria-hidden="true">＋</span
+          ><span class="new-chat-label">新建</span>
         </button>
         <p class="rail-label">从一个场景开始</p>
         <button
@@ -55,12 +56,19 @@
             <h1>招聘助手</h1>
           </div>
           <div class="header-actions">
-            <label id="history-label" hidden
-              >历史会话
-              <select id="history-select" aria-label="历史会话">
-                <option value="">＋ 新建会话</option>
-              </select>
-            </label>
+            <button
+              id="history-open"
+              class="history-trigger"
+              type="button"
+              popovertarget="history-panel"
+              aria-label="打开历史会话"
+              hidden
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 11a9 9 0 1 1 2.5 7M3 4v7h7M12 7v5l3 2" />
+              </svg>
+              <span>历史会话</span>
+            </button>
             <span class="mode-badge" id="mode-badge">交互演示 · 虚构数据</span
             ><button class="outline-button" id="settings-open">连接 Agent <span>↗</span></button>
           </div>
@@ -71,7 +79,35 @@
             <p class="eyebrow">LESS REPETITION. MORE CONNECTION.</p>
             <h2>你想找什么机会？</h2>
             <p>说出岗位、城市和数量，剩下的交给助手。</p>
-            <div class="starter-grid">
+            <div class="starter-heading">
+              <span>试试这样问<small>左右滑动，发现更多用法</small></span>
+              <div class="starter-controls">
+                <button
+                  type="button"
+                  id="starter-prev"
+                  aria-label="向左滚动提示词"
+                  aria-controls="starter-prompts"
+                  disabled
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  id="starter-next"
+                  aria-label="向右滚动提示词"
+                  aria-controls="starter-prompts"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+            <div
+              class="starter-grid"
+              id="starter-prompts"
+              role="region"
+              aria-label="预置提示词，支持左右滚动"
+              tabindex="0"
+            >
               <button
                 data-role="seeker"
                 data-prompt="帮我看看上海最近活跃的前端岗位，先整理 3 个合适的机会。"
@@ -82,6 +118,42 @@
                 data-prompt="我在招聘前端工程师，帮我整理最近活跃的候选人。"
               >
                 <span>⌕</span> 遇见匹配的候选人<small>岗位匹配 · 活跃筛选 · 先看计划</small>
+              </button>
+              <button
+                data-role="seeker"
+                data-prompt="帮我找杭州的后端开发岗位，重点看 Java、Spring Boot 和分布式系统经验，整理 5 个最近 7 天活跃的机会，先不发起沟通。"
+              >
+                <span>⌘</span> 按技术栈找工作<small>杭州 · Java 后端 · 精准筛选</small>
+              </button>
+              <button
+                data-role="seeker"
+                data-prompt="帮我找北京的产品经理岗位，优先关注 AI 产品和企业服务方向，整理 5 个最近 7 天活跃的机会，说明每个岗位的主要要求。先不发起沟通。"
+              >
+                <span>✦</span> 探索新的职业方向<small>北京 · AI 产品 · 岗位要求</small>
+              </button>
+              <button
+                data-role="seeker"
+                data-prompt="帮我搜索上海的前端岗位，选择 3 个最近 7 天活跃的结果，读取岗位详情，用表格比较职责、技术要求、薪资和工作地点。缺失信息请标明，先不联系。"
+              >
+                <span>≋</span> 对比几个好机会<small>职责 · 薪资 · 技术要求</small>
+              </button>
+              <button
+                data-role="recruiter"
+                data-prompt="先确认我当前的招聘账号和身份，再列出正在招聘的岗位及其 ID，让我选择本次要招聘的岗位。先不搜索候选人，也不发起沟通。"
+              >
+                <span>▤</span> 确认正在招聘的岗位<small>核对身份 · 列出岗位 · 选择目标</small>
+              </button>
+              <button
+                data-role="recruiter"
+                data-prompt="我想招聘熟悉 React 和 TypeScript 的前端工程师。先确认当前账号和招聘岗位，不确定时请让我选择，再筛选最近 7 天活跃的候选人，整理最多 5 人的沟通计划供我查看，暂不发送招呼。"
+              >
+                <span>✓</span> 先准备一份沟通计划<small>React / TypeScript · 5 人 · 待查看</small>
+              </button>
+              <button
+                data-role="recruiter"
+                data-prompt="请读取当前账号已有的沟通回执，整理已发送、未发送和结果不确定的记录，指出需要我核对的事项。只查看历史，不重新执行计划或补发招呼。"
+              >
+                <span>◷</span> 核对之前的沟通结果<small>查看回执 · 标记不确定项 · 不重发</small>
               </button>
             </div>
           </section>
@@ -132,6 +204,34 @@
         </div>
       </main>
     </div>
+    <section id="history-panel" popover role="dialog" aria-labelledby="history-title">
+      <div class="history-heading">
+        <div>
+          <h2 id="history-title">历史会话</h2>
+          <p id="history-count">继续上次的话题</p>
+        </div>
+        <button
+          type="button"
+          class="history-close"
+          aria-label="关闭历史会话"
+          popovertarget="history-panel"
+          popovertargetaction="hide"
+        >
+          ×
+        </button>
+      </div>
+      <label class="history-search"
+        ><span aria-hidden="true">⌕</span
+        ><input
+          id="history-search"
+          type="search"
+          placeholder="搜索会话…"
+          aria-label="搜索历史会话"
+          autocomplete="off"
+      /></label>
+      <div id="history-list" class="history-list" aria-label="历史会话列表"></div>
+      <p id="history-feedback" role="status"></p>
+    </section>
     <dialog id="settings-dialog">
       <form id="settings-form">
         <div class="dialog-heading">

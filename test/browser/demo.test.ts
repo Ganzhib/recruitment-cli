@@ -29,6 +29,17 @@ test('long demo conversations scroll inside the pane and keep the composer visib
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 700 });
       await page.goto(siteUrl + 'demo/');
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      assert.equal(await page.locator('#starter-prev').isDisabled(), true);
+      await page.locator('#starter-next').click();
+      await page.waitForFunction(() => document.querySelector('#starter-prompts')!.scrollLeft > 0);
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      );
+      await page.locator('#starter-prev').click();
+      await page.waitForFunction(() => document.querySelector('#starter-prompts')!.scrollLeft <= 1);
+      await screenshot(page, 'demo-prompts-' + width);
       for (let turn = 0; turn < 3; turn++) {
         await page.locator('#message-input').fill('再整理一组近期活跃的机会');
         await page.locator('#send-button').click();
@@ -235,9 +246,18 @@ test('local demo restores history after reload without sending requests or resto
       await page.reload();
       await page.locator('.message.user').waitFor();
       assert.equal(requests.length, 0);
-      await page.locator('#history-select').selectOption('');
+      await page.locator('#history-open').click();
+      await page.locator('#history-search').fill('不存在的会话');
+      assert.equal(await page.locator('.history-item').count(), 0);
+      assert.match(await page.locator('.history-empty').innerText(), /没有找到/);
+      await page.locator('#history-search').fill('招聘需求');
+      assert.equal(await page.locator('.history-item').count(), 1);
+      await screenshot(page, 'demo-history-panel-' + width);
+      assert.equal(await page.locator('#history-panel #new-chat').count(), 0);
+      await page.locator('.sidebar #new-chat').click();
       assert.equal(await page.locator('#messages').innerText(), '');
-      await page.locator('#history-select').selectOption('d8111fb3-c7fe-48db-ab95-e4f01700b6b5');
+      await page.locator('#history-open').click();
+      await page.locator('.history-item').click();
       await page.locator('.message.user').waitFor();
       assert.equal(requests.length, 0);
     }

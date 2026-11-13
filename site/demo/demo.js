@@ -9,6 +9,7 @@ const state = {
   configured: false,
   role: 'seeker',
   conversationId: undefined,
+  history: [],
   busy: false,
   inlineTools: new Map(),
   executionGroup: undefined,
@@ -270,7 +271,7 @@ function reset(save = true) {
   status('idle', '就绪');
   $('#welcome').hidden = false;
   $('#allow-contact').checked = false;
-  $('#history-select').value = '';
+  renderHistory();
   if (save) void saveUi().catch(historyError);
 }
 function role(role, save = true) {
@@ -491,6 +492,30 @@ $('#message-input').addEventListener('keydown', (event) => {
     submit(event.currentTarget.value);
   }
 });
+const starterPrompts = $('#starter-prompts');
+function updateStarterNavigation() {
+  $('#starter-prev').disabled = starterPrompts.scrollLeft <= 1;
+  $('#starter-next').disabled =
+    starterPrompts.scrollLeft + starterPrompts.clientWidth >= starterPrompts.scrollWidth - 1;
+}
+function scrollStarters(direction) {
+  starterPrompts.scrollBy({
+    left: direction * starterPrompts.clientWidth * 0.85,
+    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+  });
+}
+$('#starter-prev').addEventListener('click', () => scrollStarters(-1));
+$('#starter-next').addEventListener('click', () => scrollStarters(1));
+starterPrompts.addEventListener('scroll', updateStarterNavigation, { passive: true });
+starterPrompts.addEventListener('keydown', (event) => {
+  if (event.target !== starterPrompts || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+  event.preventDefault();
+  scrollStarters(event.key === 'ArrowLeft' ? -1 : 1);
+});
+const starterObserver = new ResizeObserver(updateStarterNavigation);
+starterObserver.observe(starterPrompts);
+window.addEventListener('pagehide', () => starterObserver.disconnect());
+updateStarterNavigation();
 document.querySelectorAll('[data-prompt]').forEach((button) =>
   button.addEventListener('click', () => {
     role(button.dataset.role);
@@ -502,7 +527,12 @@ document.querySelectorAll('[data-scenario]').forEach((button) =>
     if (!state.busy) role(button.dataset.scenario);
   }),
 );
-$('#new-chat').addEventListener('click', () => reset());
+$('#new-chat').addEventListener('click', () => {
+  if (state.busy) return;
+  reset();
+  $('#history-panel').hidePopover();
+  $('#message-input').focus();
+});
 $('#settings-open').addEventListener('click', () => $('#settings-dialog').showModal());
 $('#settings-close').addEventListener('click', () => $('#settings-dialog').close());
 $('#settings-form').addEventListener('submit', async (event) => {
@@ -568,22 +598,86 @@ function saveUi() {
     );
   return uiWrites;
 }
+function renderHistory() {
+  const query = $('#history-search').value.trim().toLocaleLowerCase();
+  const items = state.history.filter((item) => item.title.toLocaleLowerCase().includes(query));
+  const list = $('#history-list');
+  list.replaceChildren();
+  $('#history-count').textContent = state.history.length
+    ? `${state.history.length} 段对话 · 保存在本机`
+    : '继续上次的话题';
+  for (const item of items) {
+    const row = element('button', 'history-item');
+    row.type = 'button';
+    row.disabled = state.busy;
+    row.dataset.conversationId = item.id;
+    if (item.id === state.conversationId) {
+      row.classList.add('is-current');
+      row.setAttribute('aria-current', 'true');
+    }
+    const content = element('span', 'history-item-content');
+    content.append(element('span', 'history-item-title', item.title));
+    const date = item.updatedAt
+      ? new Date(item.updatedAt).toLocaleString('zh-CN', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '';
+    content.append(
+      element(
+        'span',
+        'history-item-date',
+        (item.id === state.conversationId ? '当前会话' : '点击继续') + (date ? ' · ' + date : ''),
+      ),
+    );
+    row.append(content);
+    if (item.running || item.interrupted)
+      row.append(
+        element(
+          'span',
+          'history-badge' + (item.running ? ' running' : ''),
+          item.running ? '执行中' : '已中断',
+        ),
+      );
+    row.addEventListener('click', async () => {
+      if (state.busy) return;
+      try {
+        await loadConversation(item.id);
+        $('#history-panel').hidePopover();
+        $('#message-input').focus();
+      } catch (error) {
+        $('#history-feedback').textContent = error.message;
+      }
+    });
+    list.append(row);
+  }
+  if (!items.length) {
+    const empty = element('div', 'history-empty');
+    empty.append(element('strong', '', query ? '没有找到匹配会话' : '还没有历史会话'));
+    empty.append(element('p', '', query ? '换个关键词试试' : '开始一段对话，它会自动保存在这里。'));
+    list.append(empty);
+  }
+}
 async function refreshHistory() {
   const { conversations } = await api('/api/conversations');
-  const select = $('#history-select');
-  select.replaceChildren(element('option', '', '＋ 新建会话'));
-  select.firstChild.value = '';
-  for (const item of conversations) {
-    const option = element(
-      'option',
-      '',
-      item.title + (item.running ? ' · 执行中' : item.interrupted ? ' · 已中断' : ''),
-    );
-    option.value = item.id;
-    select.append(option);
-  }
-  select.value = state.conversationId ?? '';
+  state.history = conversations;
+  renderHistory();
 }
+$('#history-search').addEventListener('input', renderHistory);
+$('#history-panel').addEventListener('beforetoggle', (event) => {
+  if (event.newState !== 'open') return;
+  $('#history-search').value = '';
+  $('#history-feedback').textContent = '';
+  renderHistory();
+  void refreshHistory().catch((error) => {
+    $('#history-feedback').textContent = error.message;
+  });
+});
+$('#history-panel').addEventListener('toggle', (event) => {
+  if (event.newState === 'open') $('#history-search').focus();
+});
 async function loadConversation(id) {
   if (state.busy) return;
   state.busy = true;
@@ -634,22 +728,9 @@ async function loadConversation(id) {
       message('error', '上次执行中断，未自动重跑。请先核对操作回执。');
     status('error', '上次执行中断');
   } else status('done', '已恢复历史会话');
-  $('#history-select').value = id;
+  renderHistory();
   await saveUi();
 }
-$('#history-select').addEventListener('change', async (event) => {
-  if (state.busy) {
-    event.currentTarget.value = state.conversationId ?? '';
-    return;
-  }
-  const id = event.currentTarget.value;
-  try {
-    if (id) await loadConversation(id);
-    else reset();
-  } catch (error) {
-    historyError(error);
-  }
-});
 async function initialize() {
   state.local = location.hostname === '127.0.0.1';
   if (!state.local) {
@@ -680,7 +761,7 @@ async function initialize() {
     $('#composer-note').textContent = '本地服务未连接。请确认使用 recruit demo 启动。';
   }
   try {
-    $('#history-label').hidden = false;
+    $('#history-open').hidden = false;
     const ui = await api('/api/ui');
     role(ui.role, false);
     $('#platform').value = ui.platform;
