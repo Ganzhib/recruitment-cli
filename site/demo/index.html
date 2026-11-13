@@ -185,6 +185,47 @@
             <button type="button" class="outline-button" id="login-account">扫码登录 BOSS</button>
             <button type="button" class="outline-button" id="auto-greet">准备自动打招呼指令</button>
           </div>
+          <div class="quick-phrases" aria-label="常用语">
+            <span class="quick-phrases-label">常用语</span>
+            <div class="quick-phrases-list" tabindex="0" aria-label="常用语快捷按钮，可左右滑动">
+              <button
+                type="button"
+                data-phrase="请沿用刚才确认的条件，再筛选 5 个匹配结果，排除已经看过或联系过的对象。条件不完整时先问我，暂不发起沟通。"
+              >
+                再找 5 个
+              </button>
+              <button
+                type="button"
+                data-phrase="请将活跃范围缩小到最近 7 天，按刚才确认的岗位和城市重新筛选，只展示结果，暂不发起沟通。"
+              >
+                最近 7 天
+              </button>
+              <button
+                type="button"
+                data-phrase="请把刚才的匹配结果整理成对比表格，列出岗位或经验、城市、匹配理由和活跃状态，缺失信息请标明。"
+              >
+                表格对比
+              </button>
+              <button
+                type="button"
+                data-phrase="这次先不要联系任何人，也不要执行沟通计划。请先整理筛选结果和推荐理由，等我确认。"
+              >
+                先不联系
+              </button>
+              <button
+                type="button"
+                data-phrase="请查看当前账号已有的沟通回执，说明已发送、未发送和结果不确定的情况。只读取记录，不重新执行或补发。"
+              >
+                查看回执
+              </button>
+              <button
+                type="button"
+                data-phrase="请简短总结这段会话已经完成的事项、尚未确定的条件和建议的下一步，区分实际结果与待执行的计划。"
+              >
+                总结进展
+              </button>
+            </div>
+          </div>
           <form id="chat-form" class="composer">
             <textarea
               id="message-input"

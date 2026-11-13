@@ -1284,6 +1284,8 @@ dialog code {
 .history-list {
   margin-top: 12px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: hidden;
   gap: 4px;
   max-height: 320px;
   overflow-y: auto;
@@ -1291,6 +1293,7 @@ dialog code {
   scrollbar-color: #3a536f transparent;
 }
 .history-item {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1395,4 +1398,60 @@ dialog code {
     max-width: calc(100vw - 76px);
     padding: 16px;
   }
+}
+
+.quick-phrases {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 10px;
+}
+.quick-phrases-label {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #7995b0;
+}
+.quick-phrases-list {
+  display: flex;
+  gap: 7px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 2px 0;
+}
+.quick-phrases-list button {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border: 1px solid #263c53;
+  border-radius: 16px;
+  background: transparent;
+  color: #9db9d3;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.quick-phrases-list button:hover {
+  color: #d3e4f7;
+  background: #172a3d;
+  border-color: #4c7091;
+}
+.quick-phrases-list:focus-visible,
+.quick-phrases-list button:focus-visible {
+  outline: 2px solid #8cc7f4;
+  outline-offset: -2px;
+}
+#history-panel {
+  overflow-x: hidden;
+}
+.starter-grid,
+.history-list,
+#history-panel,
+.quick-phrases-list {
+  scrollbar-width: none;
+}
+.starter-grid::-webkit-scrollbar,
+.history-list::-webkit-scrollbar,
+#history-panel::-webkit-scrollbar,
+.quick-phrases-list::-webkit-scrollbar {
+  display: none;
 }

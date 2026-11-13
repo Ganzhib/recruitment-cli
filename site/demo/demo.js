@@ -789,3 +789,12 @@ $('#auto-greet').addEventListener('click', () => {
   $('#allow-contact').checked = true;
   $('#message-input').focus();
 });
+
+document.querySelectorAll('[data-phrase]').forEach((button) => {
+  button.addEventListener('click', () => {
+    if (state.busy) return;
+    const input = $('#message-input');
+    input.value = button.dataset.phrase;
+    input.focus();
+  });
+});

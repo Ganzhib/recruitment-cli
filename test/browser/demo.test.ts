@@ -142,6 +142,11 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
       assert.equal(await page.locator('#activity-panel, #activity-toggle').count(), 0);
       assert.equal(await page.locator('#allow-contact').isChecked(), false);
       await page.locator('#allow-contact').uncheck();
+      const previousRequests = requests.length;
+      await page.getByRole('button', { name: '查看回执', exact: true }).click();
+      assert.match(await page.locator('#message-input').inputValue(), /已有的沟通回执/);
+      assert.equal(requests.length, previousRequests);
+      assert.equal(await page.locator('#allow-contact').isChecked(), false);
       await page.locator('#message-input').fill('查找岗位');
       await page.locator('#send-button').click();
       await page.waitForFunction(
@@ -198,7 +203,7 @@ test('local demo restores history after reload without sending requests or resto
     configured: true,
     history: {
       id: 'd8111fb3-c7fe-48db-ab95-e4f01700b6b5',
-      title: '上次的招聘需求',
+      title: '上次的招聘需求，帮我整理上海最近活跃的前端工程师岗位，并比较职责、薪资和匹配理由',
       events: [
         {
           payload: {
@@ -252,6 +257,18 @@ test('local demo restores history after reload without sending requests or resto
       assert.match(await page.locator('.history-empty').innerText(), /没有找到/);
       await page.locator('#history-search').fill('招聘需求');
       assert.equal(await page.locator('.history-item').count(), 1);
+      assert.equal(
+        await page
+          .locator('.history-list')
+          .evaluate((list) => list.scrollWidth <= list.clientWidth),
+        true,
+      );
+      assert.equal(
+        await page
+          .locator('.history-list')
+          .evaluate((list) => getComputedStyle(list).scrollbarWidth),
+        'none',
+      );
       await screenshot(page, 'demo-history-panel-' + width);
       assert.equal(await page.locator('#history-panel #new-chat').count(), 0);
       await page.locator('.sidebar #new-chat').click();
