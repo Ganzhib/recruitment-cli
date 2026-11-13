@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { setTimeout } from 'node:timers/promises';
 
 const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const dryRun = process.argv.includes('--dry-run');
@@ -55,11 +56,25 @@ if (!args) {
   execFileSync(process.execPath, [process.env.npm_execpath, ...args, `--registry=${registry}`], {
     stdio: 'inherit',
   });
-  const actual = execFileSync(
-    process.execPath,
-    [process.env.npm_execpath, 'view', `${pkg.name}@latest`, 'version', `--registry=${registry}`],
-    { encoding: 'utf8' },
-  ).trim();
-  if (actual !== pkg.version) throw new Error(`npm latest verification failed: ${actual}`);
-  console.log(`Verified npm latest: ${pkg.version}`);
+  // npm acknowledges uploads before its public index has finished processing them.
+  // Poll reads only; never repeat the publish operation after an uncertain result.
+  let verified = false;
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const check = await fetch(`${registry}${encodeURIComponent(pkg.name)}`, {
+      headers: { 'cache-control': 'no-cache' },
+    });
+    if (!check.ok) throw new Error(`Cannot verify npm metadata: HTTP ${check.status}`);
+    const currentMetadata = await check.json();
+    if (
+      currentMetadata['dist-tags'].latest === pkg.version &&
+      currentMetadata.versions[pkg.version]?.dist.integrity === integrity
+    ) {
+      verified = true;
+      break;
+    }
+    console.log(`Waiting for npm to index ${pkg.version} (${attempt + 1}/24)...`);
+    if (attempt < 23) await setTimeout(10_000);
+  }
+  if (!verified) throw new Error('npm has not indexed the release yet; inspect before rerunning.');
+  console.log(`Verified npm latest and package integrity: ${pkg.version}`);
 }
