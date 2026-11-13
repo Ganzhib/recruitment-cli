@@ -43,7 +43,8 @@
     "prepack": "npm run build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "demo": "tsx demo/demo.ts"
+    "demo": "tsx site/demo/demo.ts",
+    "build:site": "node scripts/build-site.mjs"
   },
   "dependencies": {
     "commander": "^14.0.0",

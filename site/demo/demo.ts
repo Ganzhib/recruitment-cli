@@ -9,10 +9,17 @@ import {
   createRecruitmentTools,
   RecruitmentError,
   type RecruitmentClient,
-} from '../src/index.js';
+} from '../../src/index.js';
 import { runDemoAgent, type AgentConfig, type AgentMessage } from './demo-agent.js';
 
-const root = fileURLToPath(new URL('../site/', import.meta.url));
+const root = fileURLToPath(new URL('../', import.meta.url));
+const contentTypes: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+};
 const configSchema = z.object({
   baseUrl: z.url().refine((value) => {
     const url = new URL(value);
@@ -163,24 +170,25 @@ export function createDemoServer(
         json(response, 404, { error: '接口不存在。' });
         return;
       }
-      const filename = path === '/' ? 'demo.html' : decodeURIComponent(path).replace(/^\//, '');
-      const file = resolve(root, filename);
+      const filename = decodeURIComponent(path).replace(/^\//, '');
+      if (path === '/') {
+        response.writeHead(302, { Location: '/demo/' });
+        response.end();
+        return;
+      }
+      const file = resolve(root, filename.endsWith('/') ? filename + 'index.html' : filename);
       if (!file.startsWith(root)) {
         json(response, 403, { error: '路径不可访问。' });
         return;
       }
+      const contentType = contentTypes[extname(file)];
+      if (!contentType) {
+        json(response, 404, { error: '此文件不是可公开访问的网页资源。' });
+        return;
+      }
       const content = await readFile(file);
       response.writeHead(200, {
-        'Content-Type':
-          (
-            {
-              '.html': 'text/html; charset=utf-8',
-              '.css': 'text/css; charset=utf-8',
-              '.js': 'text/javascript; charset=utf-8',
-              '.svg': 'image/svg+xml',
-              '.png': 'image/png',
-            } as Record<string, string>
-          )[extname(file)] ?? 'application/octet-stream',
+        'Content-Type': contentType,
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
       });

@@ -6,9 +6,17 @@
 
 把时间留给了解机会、认识人才，把反复筛选与点选交给 recruitment-cli。说清楚你想找的岗位，或正在招聘什么人，让 AI 帮你整理近期活跃的匹配结果、准备沟通计划，再按你的安排开始对话。
 
-[看看产品官网](https://ganzhib.github.io/recruitment-cli/) · [开始使用](#开始使用) · [体验对话 Demo](https://ganzhib.github.io/recruitment-cli/demo.html) · [淘气工作室工具箱 ↗](https://my.feishu.cn/wiki/Tj4ZwTpEUisrg3kojmbcnR9yn1I?create_from=create_doc_to_wiki)
+[看看产品官网](https://ganzhib.github.io/recruitment-cli/) · [开始使用](#开始使用) · [体验对话 Demo](https://ganzhib.github.io/recruitment-cli/demo/) · [淘气工作室工具箱 ↗](https://my.feishu.cn/wiki/Tj4ZwTpEUisrg3kojmbcnR9yn1I?create_from=create_doc_to_wiki)
 
 免费开源 · 在你的电脑上运行 · 直接在终端使用，或搭配能操作本机的 AI 助手使用
+
+## 选择你的使用方式
+
+| 你想怎么用                                                     | 从这里开始                                                 | 下一步                                                                                      |
+| -------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 业务系统接入，像这个 Chat Demo 一样                            | 从包根导入 client 或工具接口，在自己的业务流程中调用       | [业务系统接入指南](docs/GETTING_STARTED.md#1-业务系统接入) · [Demo 源码](site/demo/demo.ts) |
+| 交给 WorkBuddy、Trace、豆包、Codex、Claude Code 等第三方 Agent | 使用具备本机终端或工具调用能力的模式，把安装提示词交给助手 | [Agent 接入指南](docs/GETTING_STARTED.md#2-第三方-agent)                                    |
+| 喜欢直接使用命令行                                             | 构建后扫码登录，用命令完成搜索、计划和执行                 | [终端使用指南](docs/GETTING_STARTED.md#3-命令行爱好者)                                      |
 
 ## recruitment-cli 能帮你做什么？
 

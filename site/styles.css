@@ -1477,3 +1477,351 @@ summary:focus-visible {
     min-height: 830px;
   }
 }
+.site-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #0b121ded;
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid #27364a;
+  box-shadow: 0 10px 32px #02060c29;
+}
+/* The campaign and navigation share one sticky frame. */
+.site-chrome .studio-banner {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: #a6d9ff;
+  color: #102c43;
+  padding: 10px max(48px, calc((100vw - 1360px) / 2));
+  min-height: 46px;
+}
+.site-chrome .banner-mascot {
+  background: #17394f;
+  color: #d9f0ff;
+  width: 26px;
+  height: 25px;
+  border-radius: 7px 7px 7px 1px;
+  font-size: 12px;
+}
+.site-chrome .banner-copy {
+  gap: 17px;
+}
+.site-chrome .banner-copy strong {
+  color: #102c43;
+  font-size: 12px;
+}
+.site-chrome .banner-copy > span {
+  font-size: 11px;
+  color: #365d7a;
+}
+.site-chrome .banner-cta {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 4px 0 4px 12px;
+  font-size: 11px;
+  color: #183b54;
+  font-weight: 550;
+}
+.site-chrome .site-header {
+  background: transparent;
+  height: 74px;
+  border: 0;
+}
+.site-chrome .site-header nav {
+  gap: 27px;
+}
+html {
+  scroll-padding-top: 150px;
+}
+.audience-section {
+  padding-top: 80px;
+}
+.audience-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin: 33px 0 19px;
+}
+.audience-tabs button {
+  position: relative;
+  padding: 23px;
+  border: 1px solid #2a3a50;
+  border-radius: 10px;
+  text-align: left;
+  background: #101a29;
+  color: #c6d9ee;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.audience-tabs button[aria-selected='true'] {
+  background: #1b3045;
+  border-color: #6a9ac1;
+}
+.audience-icon {
+  display: block;
+  font: 23px var(--mono);
+  color: #9bcef2;
+  margin-bottom: 18px;
+}
+.audience-tabs strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 550;
+}
+.audience-tabs small {
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #7896b5;
+}
+.audience-arrow {
+  position: absolute;
+  top: 23px;
+  right: 22px;
+  font-size: 18px;
+  color: #5e8aaf;
+}
+.audience-panel {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 45px;
+  border: 1px solid #2e435d;
+  border-radius: 12px;
+  background: #0e1928;
+  padding: 34px;
+  align-items: start;
+}
+.audience-guide h3 {
+  font-size: 25px;
+  line-height: 1.5;
+  font-weight: 500;
+  letter-spacing: -0.8px;
+  margin: 14px 0;
+}
+.audience-guide > p:not(.section-kicker) {
+  font-size: 12px;
+  line-height: 1.9;
+  color: #8da9c4;
+}
+.audience-guide ol {
+  counter-reset: steps;
+  list-style: none;
+  padding: 0;
+  margin: 23px 0;
+  display: grid;
+  gap: 20px;
+}
+.audience-guide li {
+  counter-increment: steps;
+  padding-left: 32px;
+  position: relative;
+}
+.audience-guide li::before {
+  content: '0' counter(steps);
+  position: absolute;
+  left: 0;
+  top: 2px;
+  font: 10px var(--mono);
+  color: #648eb4;
+}
+.audience-guide li strong {
+  font-size: 13px;
+  color: #bdcfe4;
+  font-weight: 500;
+}
+.audience-guide li p {
+  font-size: 11px;
+  color: #6f8eae;
+  line-height: 1.85;
+  margin: 7px 0 0;
+}
+.audience-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.audience-actions .button {
+  font-size: 11px;
+  padding: 12px 15px;
+}
+.audience-actions .text-link {
+  font-size: 10px;
+}
+.audience-example {
+  border: 1px solid #2d455f;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #0a1320;
+}
+.audience-example .terminal-header {
+  font-size: 10px;
+  padding: 13px 15px;
+}
+.audience-example button {
+  border: 0;
+  background: transparent;
+  color: #99c7e9;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 3px;
+}
+.audience-example pre {
+  font: 11px/1.9 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #a5c4e3;
+  padding: 20px;
+  min-height: 290px;
+  margin: 0;
+}
+.audience-example > p {
+  font-size: 10px;
+  line-height: 1.9;
+  color: #5f81a4;
+  border-top: 1px solid #20364e;
+  padding: 14px 18px;
+  margin: 0;
+}
+.audience-example #copy-status {
+  margin: 0;
+  padding: 0 18px 10px;
+}
+@media (max-width: 1050px) {
+  .audience-panel {
+    padding: 27px;
+    gap: 28px;
+  }
+  .audience-actions {
+    gap: 13px;
+  }
+  .audience-tabs button {
+    padding: 20px;
+  }
+  .audience-tabs strong {
+    font-size: 14px;
+  }
+}
+@media (max-width: 800px) {
+  .site-chrome .site-header {
+    height: 68px;
+  }
+  .site-chrome .studio-banner {
+    padding: 9px 24px;
+  }
+  .site-chrome .banner-copy strong {
+    font-size: 11px;
+  }
+  .site-chrome .banner-cta {
+    font-size: 10px;
+  }
+  .site-chrome .banner-copy {
+    display: flex;
+    gap: 13px;
+  }
+  .site-chrome .banner-copy > span {
+    margin: 0;
+    font-size: 10px;
+  }
+  .audience-panel {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+  .audience-tabs {
+    gap: 9px;
+  }
+  .audience-tabs button {
+    padding: 17px 13px;
+  }
+  .audience-tabs strong {
+    font-size: 12px;
+  }
+  .audience-tabs small {
+    font-size: 10px;
+    line-height: 1.7;
+  }
+  .audience-arrow {
+    right: 12px;
+    top: 18px;
+  }
+  .audience-example pre {
+    min-height: 0;
+  }
+  .audience-section {
+    padding-top: 60px;
+  }
+}
+@media (max-width: 480px) {
+  .site-chrome .banner-copy {
+    display: block;
+  }
+  .site-chrome .banner-copy > span {
+    font-size: 8px;
+    margin-top: 4px;
+  }
+  .site-chrome .banner-copy strong {
+    font-size: 10px;
+  }
+  .site-chrome .banner-cta {
+    font-size: 9px;
+  }
+  .site-chrome .studio-banner {
+    padding: 9px 20px;
+    min-height: 50px;
+  }
+  .site-chrome .site-header {
+    height: 64px;
+  }
+  .site-chrome .logo {
+    width: 31px;
+    height: 31px;
+    font-size: 25px;
+  }
+  .audience-tabs {
+    grid-template-columns: 1fr;
+    margin-top: 27px;
+    gap: 8px;
+  }
+  .audience-tabs button {
+    padding: 15px 17px 15px 56px;
+    min-height: 66px;
+  }
+  .audience-icon {
+    position: absolute;
+    left: 18px;
+    top: 21px;
+    font-size: 20px;
+    margin: 0;
+  }
+  .audience-tabs strong {
+    font-size: 13px;
+  }
+  .audience-tabs small {
+    margin-top: 6px;
+  }
+  .audience-arrow {
+    top: 21px;
+    right: 17px;
+  }
+  .audience-panel {
+    padding: 23px 20px;
+  }
+  .audience-guide h3 {
+    font-size: 23px;
+  }
+  .audience-example pre {
+    font-size: 10px;
+    padding: 18px;
+  }
+  .audience-example .terminal-header {
+    font-size: 9px;
+  }
+  .audience-actions .button {
+    font-size: 10px;
+  }
+}

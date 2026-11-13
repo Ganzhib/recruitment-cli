@@ -1,5 +1,5 @@
-import type { RecruitmentTools, ToolPolicy } from '../src/services/agent-tools.js';
-import { RecruitmentError } from '../src/shared/errors.js';
+import type { RecruitmentTools, ToolPolicy } from '../../src/services/agent-tools.js';
+import { RecruitmentError } from '../../src/shared/errors.js';
 
 export interface AgentConfig {
   baseUrl: string;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { createDemoServer } from '../demo/demo.js';
+import { createDemoServer } from '../site/demo/demo.js';
 import { createRecruitmentClient } from '../src/index.js';
 import { fakePlatform, temporaryHome } from './helpers.js';
 
@@ -26,7 +26,9 @@ test('demo serves assets, exposes tools, rejects cross-origin access and keeps k
     });
     const base = await serve(server);
     try {
-      assert.equal((await fetch(base + '/demo.html')).status, 200);
+      assert.equal((await fetch(base + '/demo/')).status, 200);
+      assert.equal((await fetch(base + '/')).url, base + '/demo/');
+      assert.equal((await fetch(base + '/demo/demo.ts')).status, 404);
       assert.equal((await fetch(base + '/api/tools')).status, 200);
       assert.equal(
         (await fetch(base + '/api/config', { headers: { Origin: 'https://attacker.example' } }))

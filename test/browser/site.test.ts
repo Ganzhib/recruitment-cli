@@ -7,7 +7,8 @@ import { fixtureBrowser } from './fixtures.js';
 const browser = fixtureBrowser(async (route) => {
   const url = new URL(route.request().url());
   if (url.hostname !== 'pages.example.test') return route.abort();
-  const name = url.pathname.replace('/recruitment-cli/', '') || 'index.html';
+  let name = url.pathname.replace('/recruitment-cli/', '') || 'index.html';
+  if (name.endsWith('/')) name += 'index.html';
   const content = await readFile(resolve('site', name));
   const contentType = (
     {
@@ -46,7 +47,7 @@ test('product site supports role selection and desktop/mobile layouts without ov
 });
 test('static demo declares simulated results, shows the workflow and offers local Agent setup', async () => {
   await browser('', async (_context, page) => {
-    await page.goto('https://pages.example.test/recruitment-cli/demo.html?role=recruiter');
+    await page.goto('https://pages.example.test/recruitment-cli/demo/?role=recruiter');
     assert.match(await page.locator('#context-role').innerText(), /招聘者示例/);
     await page.locator('[data-prompt]').last().click();
     await page.locator('.result-card').first().waitFor();
@@ -65,7 +66,7 @@ test('long demo conversations scroll inside the pane and keep the composer visib
   await browser('', async (_context, page) => {
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 700 });
-      await page.goto('https://pages.example.test/recruitment-cli/demo.html');
+      await page.goto('https://pages.example.test/recruitment-cli/demo/');
       for (let turn = 0; turn < 3; turn++) {
         await page.locator('#message-input').fill('再整理一组近期活跃的机会');
         await page.locator('#send-button').click();
@@ -95,6 +96,34 @@ test('long demo conversations scroll inside the pane and keep the composer visib
       await frame
         .locator('#chat-form')
         .evaluate((element) => element.getBoundingClientRect().bottom <= window.innerHeight),
+      true,
+    );
+  });
+});
+
+test('onboarding follows three audiences and the entire banner-navigation group stays sticky', async () => {
+  await browser('', async (_context, page) => {
+    await page.goto('https://pages.example.test/recruitment-cli/');
+    assert.match(await page.locator('#audience-code').innerText(), /createRecruitmentClient/);
+    await page.locator('#audience-agent').click();
+    assert.match(await page.locator('#audience-description').innerText(), /WorkBuddy/);
+    assert.match(await page.locator('#audience-code').innerText(), /先不发招呼/);
+    await page.locator('#audience-terminal').click();
+    assert.match(await page.locator('#audience-code').innerText(), /node dist\/recruit.js/);
+    await page.locator('#audience-terminal').press('ArrowLeft');
+    assert.equal(await page.locator('#audience-agent').getAttribute('aria-selected'), 'true');
+    await page.locator('#agents').scrollIntoViewIfNeeded();
+    assert.equal(
+      await page.locator('.site-chrome').evaluate((element) => {
+        const header = element.getBoundingClientRect();
+        const banner = element.querySelector('.studio-banner')!.getBoundingClientRect();
+        const navigation = element.querySelector('.site-header')!.getBoundingClientRect();
+        return (
+          header.top === 0 &&
+          Math.abs(banner.bottom - navigation.top) < 1 &&
+          banner.width === innerWidth
+        );
+      }),
       true,
     );
   });

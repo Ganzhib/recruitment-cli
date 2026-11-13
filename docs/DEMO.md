@@ -7,7 +7,7 @@ npm ci
 npm run demo
 ```
 
-打开 `http://127.0.0.1:4318/`。入口服务是 `demo/demo.ts`，页面位于 `site/demo.html`。`RECRUIT_DEMO_PORT` 可以指定其他本地端口。
+打开 `http://127.0.0.1:4318/`。入口服务是 `site/demo/demo.ts`，页面位于 `site/demo/index.html`。`RECRUIT_DEMO_PORT` 可以指定其他本地端口。
 
 未连接模型时，页面明确显示预设示例工作流，数据均为虚构，不调用真实招聘平台。GitHub Pages 上的 Demo 也使用该模式。连接模型后，聊天请求由真实模型生成工具调用，服务复用包根导出的 client 执行，页面显示工具参数、对应 CLI 命令和返回回执。
 
@@ -101,7 +101,7 @@ const result = await tools.execute('recruit_search', {
 
 ## GitHub Pages
 
-产品宣传页源文件在 `site/`，入口 `site/index.html`，Demo 为 `site/demo.html`。`.github/workflows/pages.yml` 将这个目录发布到 GitHub Pages。需要将仓库 Pages 的 Source 设置为 GitHub Actions。
+产品宣传页源文件在 `site/`，入口 `site/index.html`，Demo 为 `site/demo/index.html`。`npm run build:site` 将页面资源输出到 `site-dist/`，排除本地服务的 TypeScript 源文件；`.github/workflows/pages.yml` 发布构建结果到 GitHub Pages。需要将仓库 Pages 的 Source 设置为 GitHub Actions。
 
 公开页面不包含账号、模型密钥或本地会话，也不会从线上页面直接调用本机 CLI。页面上的「连接 Agent」会说明如何启动本地服务。
 
