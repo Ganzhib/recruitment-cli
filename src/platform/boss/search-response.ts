@@ -3,7 +3,7 @@ import { RecruitmentError } from '../../shared/errors.js';
 import { bossPayload, BOSS_ORIGIN } from './session.js';
 import { isBossVerification, requestFields } from './protocol.js';
 
-export function observeSearchResponse<T>(page: Page, path: string, timeoutMs = 45000) {
+export function observeSearchResponse<T>(page: Page, path: string, timeoutMs = 20000) {
   const expected = new URL(path, BOSS_ORIGIN);
   const requests = new Set<Request>();
   let committed = false;
@@ -45,7 +45,10 @@ export function observeSearchResponse<T>(page: Page, path: string, timeoutMs = 4
   };
   const onResponse = (response: Response) => {
     if (!requests.has(response.request())) return;
-    if (!response.headers()['content-type']?.includes('json')) return;
+    if (!response.ok() || !response.headers()['content-type']?.includes('json')) {
+      reject(failure('response-unavailable', 'BOSS 搜索未返回可用数据，未自动重试。'));
+      return;
+    }
     void response.json().then(
       (body) => {
         try {
@@ -58,6 +61,9 @@ export function observeSearchResponse<T>(page: Page, path: string, timeoutMs = 4
     );
   };
   const onClosed = () => reject(failure('browser-closed', '后台搜索页面已关闭。'));
+  const onFailed = (request: Request) => {
+    if (requests.has(request)) reject(failure('request-failed', 'BOSS 搜索连接失败，未自动重试。'));
+  };
   const timer = setTimeout(
     () => reject(failure('search-timeout', '等待 BOSS 网页搜索结果超时，未自动重试。')),
     timeoutMs,
@@ -65,6 +71,7 @@ export function observeSearchResponse<T>(page: Page, path: string, timeoutMs = 4
   page.on('framenavigated', onFrame);
   page.on('request', onRequest);
   page.on('response', onResponse);
+  page.on('requestfailed', onFailed);
   page.on('close', onClosed);
   page.on('crash', onClosed);
   return {
@@ -74,6 +81,7 @@ export function observeSearchResponse<T>(page: Page, path: string, timeoutMs = 4
       page.off('framenavigated', onFrame);
       page.off('request', onRequest);
       page.off('response', onResponse);
+      page.off('requestfailed', onFailed);
       page.off('close', onClosed);
       page.off('crash', onClosed);
       requests.clear();

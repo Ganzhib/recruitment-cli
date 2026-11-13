@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { createRecruitmentClient, RecruitmentError } from '../src/index.js';
 import { writeJson } from '../src/runtime/storage.js';
 import { fakePlatform, target, temporaryHome } from './helpers.js';
+import type { PlatformSession } from '../src/core/platform.js';
 
 test('search uses recent activity, excludes contacted and unknown, and orders active targets', async () =>
   temporaryHome(async (home) => {
@@ -87,6 +88,41 @@ test('pending receipt from a crashed process is converted to indeterminate witho
     });
     assert.equal((await client.run(plan.id)).operations[0].state, 'indeterminate');
     assert.equal(state.sends.length, 1);
+  }));
+
+test('uncertain receipt keeps safe diagnostics in history and does not repeat its write', async () =>
+  temporaryHome(async (home) => {
+    const { platform, state } = fakePlatform();
+    const client = createRecruitmentClient({ home, platforms: [platform] });
+    await client.login({ platform: 'test' });
+    const plan = await client.prepare({ platform: 'test' }, { query: 'TypeScript' });
+    let sends = 0;
+    const session = {
+      profile: state.profile,
+      invoke: async (capability: string) => {
+        if (capability === 'contact.prepare') return { target: plan.targets[0], ready: true };
+        sends++;
+        assert.equal((await client.history({ platform: 'test' }))[0].state, 'pending');
+        throw new RecruitmentError('INDETERMINATE', 'missing receipt', {
+          reason: 'receipt-timeout',
+          endpoint: '/contact?securityId=fabricated-secret',
+          requestObserved: true,
+          cookies: 'fabricated-secret',
+        });
+      },
+    } as unknown as PlatformSession;
+    await client.outreach.run(plan, session);
+    await client.outreach.run(plan, session);
+    assert.equal(sends, 1);
+    const [operation] = await client.history({ platform: 'test' });
+    assert.equal(operation.state, 'indeterminate');
+    assert.deepEqual(operation.failure, {
+      code: 'INDETERMINATE',
+      reason: 'receipt-timeout',
+      endpoint: '/contact',
+      requestObserved: true,
+    });
+    assert.doesNotMatch(JSON.stringify(operation), /fabricated-secret/);
   }));
 test('changed user or role cannot execute a frozen plan', async () =>
   temporaryHome(async (home) => {

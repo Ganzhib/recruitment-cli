@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AccountProfile, Role } from '../../core/schemas.js';
 import { RecruitmentError } from '../../shared/errors.js';
 import { navigate } from '../../runtime/browser.js';
+import { isBossVerification } from './protocol.js';
 
 export const BOSS_ORIGIN = 'https://www.zhipin.com';
 export const BOSS_LOGIN = BOSS_ORIGIN + '/web/user/?ka=header-login';
@@ -43,22 +44,34 @@ export async function bossGet<T>(page: Page, path: string): Promise<T> {
   const token = (await page.context().cookies(BOSS_ORIGIN)).find(
     (cookie) => cookie.name === 'bst',
   )?.value;
-  const response = (await page.evaluate(
-    async ({ path, token }) => {
-      const result = await fetch(path, {
-        credentials: 'include',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          ...(token ? { zp_token: token } : {}),
-        },
+  const response = (await page
+    .evaluate(
+      async ({ path, token }) => {
+        const url = new URL(path, location.origin);
+        const isSearch = url.pathname === '/wapi/zpgeek/search/joblist.json';
+        const result = await fetch(isSearch ? url.pathname : path, {
+          method: isSearch ? 'POST' : 'GET',
+          ...(isSearch ? { body: url.searchParams } : {}),
+          credentials: 'include',
+          signal: AbortSignal.timeout(20000),
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            ...(token ? { zp_token: token } : {}),
+          },
+        });
+        if (!result.ok) return { httpError: result.status, envelope: null };
+        if (!result.headers.get('content-type')?.includes('json'))
+          return { httpError: 0, envelope: null };
+        return { httpError: 0, envelope: await result.json() };
+      },
+      { path, token },
+    )
+    .catch(() => {
+      throw new RecruitmentError('NETWORK', 'BOSS 页面请求超时或连接中断，未自动重试。', {
+        endpoint,
+        reason: 'request-failed',
       });
-      if (!result.ok) return { httpError: result.status, envelope: null };
-      if (!result.headers.get('content-type')?.includes('json'))
-        return { httpError: 0, envelope: null };
-      return { httpError: 0, envelope: await result.json() };
-    },
-    { path, token },
-  )) as { httpError: number; envelope: BossEnvelope<T> | null };
+    })) as { httpError: number; envelope: BossEnvelope<T> | null };
   if (response.httpError || !response.envelope)
     throw new RecruitmentError('NETWORK', '平台未返回可用的 JSON 响应。', {
       endpoint,
@@ -74,21 +87,27 @@ export function bossPayload<T>(envelope: BossEnvelope<T>, endpoint: string): T {
       {
         platformCode: envelope.code,
         endpoint,
-        reason: /环境.*异常/.test(envelope.message)
-          ? 'environment-rejected'
-          : envelope.code === 37
-            ? 'session-rejected'
-            : [121, 122].includes(envelope.code)
-              ? 'verification-required'
-              : envelope.code === 9
-                ? 'rate-limited'
-                : 'platform-error',
+        reason: /账户.*异常|账号.*异常/.test(envelope.message)
+          ? 'account-restricted'
+          : /环境.*异常/.test(envelope.message)
+            ? 'environment-rejected'
+            : envelope.code === 37
+              ? 'session-rejected'
+              : [121, 122].includes(envelope.code)
+                ? 'verification-required'
+                : envelope.code === 9
+                  ? 'rate-limited'
+                  : 'platform-error',
       },
     );
   if (envelope.zpData === null) throw new RecruitmentError('PLATFORM', 'BOSS 成功响应缺少数据。');
   return envelope.zpData;
 }
 export async function identify(page: Page): Promise<AccountProfile> {
+  if (isBossVerification(page.url()))
+    throw new RecruitmentError('AUTH', 'BOSS 要求安全验证，后台操作已停止。', {
+      reason: 'verification-required',
+    });
   const role = roleFromUrl(page.url());
   if (!role)
     throw new RecruitmentError('AUTH', '请完成扫码登录，并进入求职端或招聘端主页以识别当前身份。');

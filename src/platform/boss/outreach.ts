@@ -1,10 +1,11 @@
-import type { Page, Response } from 'playwright';
+import type { Frame, Page, Request, Response } from 'playwright';
 import type { ContactReceipt, PreparedContact, Target } from '../../core/schemas.js';
 import { RecruitmentError } from '../../shared/errors.js';
 import { assertCurrentAccount, type BossSession } from './session.js';
 import { candidateCard, readCandidateCards, readJobDetail } from './discovery.js';
 import { candidateContextSchema } from './session.js';
 import { bossSelectors as selectors } from './selectors.js';
+import { isBossVerification, requestFields } from './protocol.js';
 
 export async function prepareContact(
   session: BossSession,
@@ -43,26 +44,42 @@ export async function observeGreeting(
 ): Promise<ContactReceipt> {
   let onResponse: (response: Response) => void;
   let timer: ReturnType<typeof setTimeout>;
+  const requests = new Set<Request>();
+  let onFrame: (frame: Frame) => void;
+  let onClosed: () => void;
+  const onRequest = (request: Request) => {
+    const url = new URL(request.url());
+    if (url.origin !== 'https://www.zhipin.com' || url.pathname !== endpoint) return;
+    const parameters = requestFields(request.url(), request.postData());
+    if (Object.entries(expected).every(([key, value]) => parameters.get(key) === value))
+      requests.add(request);
+  };
+  const unknown = (reason: string, message: string, extra = {}) =>
+    new RecruitmentError('INDETERMINATE', message, {
+      endpoint,
+      reason,
+      requestObserved: requests.size > 0,
+      ...extra,
+    });
   const response = new Promise<ContactReceipt>((resolve, reject) => {
     timer = setTimeout(
       () =>
         reject(
-          new RecruitmentError(
-            'INDETERMINATE',
+          unknown(
+            'receipt-timeout',
             '未获得打招呼接口结果，请在平台沟通记录中核实；不会自动重发。',
           ),
         ),
       timeoutMs,
     );
     onResponse = (response) => {
-      const url = new URL(response.url());
-      if (url.origin !== 'https://www.zhipin.com' || url.pathname !== endpoint) return;
-      const parameters = new URLSearchParams(url.search);
-      const body = response.request().postData();
-      if (body) for (const [key, value] of new URLSearchParams(body)) parameters.set(key, value);
-      if (Object.entries(expected).some(([key, value]) => parameters.get(key) !== value)) return;
+      if (!requests.has(response.request())) return;
       if (!response.ok()) {
-        reject(new RecruitmentError('INDETERMINATE', '打招呼接口未返回成功的 HTTP 状态。'));
+        reject(
+          unknown('receipt-http-error', '打招呼接口未返回成功的 HTTP 状态。', {
+            httpStatus: response.status(),
+          }),
+        );
         return;
       }
       response.json().then(
@@ -71,6 +88,9 @@ export async function observeGreeting(
             reject(
               new RecruitmentError('PLATFORM', '平台未确认发送成功：' + body.message, {
                 platformCode: body.code,
+                endpoint,
+                reason: 'receipt-rejected',
+                requestObserved: true,
               }),
             );
             return;
@@ -83,10 +103,22 @@ export async function observeGreeting(
             },
           });
         },
-        () => reject(new RecruitmentError('INDETERMINATE', '打招呼接口返回了无法读取的响应。')),
+        () => reject(unknown('receipt-unreadable', '打招呼接口返回了无法读取的响应。')),
       );
     };
+    onFrame = (frame) => {
+      if (frame === page.mainFrame() && isBossVerification(frame.url()))
+        reject(
+          unknown('verification-required', 'BOSS 要求安全验证，发送结果待核实，不会自动重发。'),
+        );
+    };
+    onClosed = () =>
+      reject(unknown('browser-closed', '沟通页面已关闭，发送结果待核实，不会自动重发。'));
+    page.on('request', onRequest);
     page.on('response', onResponse);
+    page.on('framenavigated', onFrame);
+    page.on('close', onClosed);
+    page.on('crash', onClosed);
   });
   try {
     // Both promises are observed: a failed click must also dispose the response watcher.
@@ -95,6 +127,10 @@ export async function observeGreeting(
   } finally {
     clearTimeout(timer!);
     page.off('response', onResponse!);
+    page.off('request', onRequest);
+    page.off('framenavigated', onFrame!);
+    page.off('close', onClosed!);
+    page.off('crash', onClosed!);
   }
 }
 export async function sendContact(session: BossSession, target: Target): Promise<ContactReceipt> {

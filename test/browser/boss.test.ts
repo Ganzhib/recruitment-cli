@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import type { Page, Response } from 'playwright';
+import type { Page, Request, Response } from 'playwright';
 import { createRecruitmentClient, createBossPlatform } from '../../src/index.js';
 import { observeGreeting } from '../../src/platform/boss/outreach.js';
 import { bossFixture } from './boss-fixture.js';
@@ -80,9 +80,13 @@ test('native greeting watcher times out without success and removes listeners af
 test('native greeting ignores successful responses for other targets', async () => {
   const events = new EventEmitter();
   const page = events as unknown as Page;
+  const request = {
+    url: () => 'https://www.zhipin.com/wapi/zpgeek/friend/add.json?securityId=other',
+    postData: () => null,
+  } as unknown as Request;
   const wrongResponse = {
     url: () => 'https://www.zhipin.com/wapi/zpgeek/friend/add.json?securityId=other',
-    request: () => ({ postData: () => null }),
+    request: () => request,
     ok: () => true,
     json: async () => ({ code: 0, message: '' }),
   } as unknown as Response;
@@ -91,6 +95,7 @@ test('native greeting ignores successful responses for other targets', async () 
       page,
       '/wapi/zpgeek/friend/add.json',
       async () => {
+        events.emit('request', request);
         events.emit('response', wrongResponse);
       },
       20,
@@ -99,6 +104,69 @@ test('native greeting ignores successful responses for other targets', async () 
     /不会自动重发/,
   );
   assert.equal(events.listenerCount('response'), 0);
+});
+
+test('greeting correlates JSON requests, ignores stale responses and cleans up after closing', async () => {
+  const endpoint = '/wapi/zpgeek/friend/add.json';
+  const events = new EventEmitter();
+  const page = events as unknown as Page;
+  const request = () =>
+    ({
+      url: () => 'https://www.zhipin.com' + endpoint,
+      postData: () => JSON.stringify({ securityId: 'fabricated-target' }),
+    }) as unknown as Request;
+  const response = (req: Request) =>
+    ({
+      request: () => req,
+      ok: () => true,
+      json: async () => ({ code: 0 }),
+    }) as unknown as Response;
+  await assert.rejects(
+    observeGreeting(
+      page,
+      endpoint,
+      async () => {
+        events.emit('response', response(request()));
+      },
+      20,
+      { securityId: 'fabricated-target' },
+    ),
+    /不会自动重发/,
+  );
+  const receipt = await observeGreeting(
+    page,
+    endpoint,
+    async () => {
+      const req = request();
+      events.emit('request', req);
+      events.emit('response', response(req));
+    },
+    1000,
+    { securityId: 'fabricated-target' },
+  );
+  assert.equal(receipt.state, 'sent');
+  await assert.rejects(
+    observeGreeting(
+      page,
+      endpoint,
+      async () => {
+        events.emit('request', request());
+        events.emit('close');
+      },
+      1000,
+      { securityId: 'fabricated-target' },
+    ),
+    (error: unknown) => {
+      assert.equal((error as { details: { reason: string } }).details.reason, 'browser-closed');
+      assert.equal(
+        (error as { details: { requestObserved: boolean } }).details.requestObserved,
+        true,
+      );
+      return true;
+    },
+  );
+  for (const event of ['request', 'response', 'framenavigated', 'close', 'crash'])
+    assert.equal(events.listenerCount(event), 0);
 });
 
 test('BOSS login follows a new authenticated tab when the original login page closes', async () => {

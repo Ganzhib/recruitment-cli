@@ -36,6 +36,16 @@ export const operationSchema = z.object({
   updatedAt: z.iso.datetime(),
   receipt: receiptSchema.optional(),
   reason: z.string().optional(),
+  failure: z
+    .object({
+      code: z.string(),
+      reason: z.string().optional(),
+      endpoint: z.string().optional(),
+      platformCode: z.number().optional(),
+      httpStatus: z.number().optional(),
+      requestObserved: z.boolean().optional(),
+    })
+    .optional(),
 });
 export type ContactPlan = z.infer<typeof planSchema>;
 export type ContactOperation = z.infer<typeof operationSchema>;
@@ -135,6 +145,18 @@ export class OutreachService {
         operation.state = 'indeterminate';
         operation.reason =
           error instanceof RecruitmentError ? error.code : 'dispatch-result-unknown';
+        if (error instanceof RecruitmentError) {
+          const { reason, endpoint, platformCode, httpStatus, requestObserved } =
+            error.details ?? {};
+          operation.failure = {
+            code: error.code,
+            ...(typeof reason === 'string' ? { reason } : {}),
+            ...(typeof endpoint === 'string' ? { endpoint: endpoint.split('?')[0] } : {}),
+            ...(typeof platformCode === 'number' ? { platformCode } : {}),
+            ...(typeof httpStatus === 'number' ? { httpStatus } : {}),
+            ...(typeof requestObserved === 'boolean' ? { requestObserved } : {}),
+          };
+        }
         operation.updatedAt = new Date().toISOString();
         await writeJson(file, operation);
         operations.push(operation);

@@ -37,6 +37,7 @@ test('BOSS reads use the current session token and never send it to another orig
 
 test('BOSS read failures preserve endpoint and rejection reason without retrying or exposing queries', async () => {
   const scenarios = [
+    { code: 36, message: '您的账户存在异常行为.', reason: 'account-restricted' },
     { code: 37, message: '您的环境存在异常.', reason: 'environment-rejected' },
     { code: 37, message: '请登录', reason: 'session-rejected' },
     { code: 121, message: '请验证', reason: 'verification-required' },
