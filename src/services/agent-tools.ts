@@ -12,6 +12,8 @@ export interface RecruitmentToolEvent {
   input?: unknown;
   result?: unknown;
   error?: string;
+  errorCode?: RecruitmentError['code'];
+  errorDetails?: Record<string, unknown>;
   durationMs?: number;
 }
 export interface ToolPolicy {
@@ -199,6 +201,9 @@ export function createRecruitmentTools(
           name,
           command,
           error: message,
+          ...(error instanceof RecruitmentError
+            ? { errorCode: error.code, errorDetails: error.details }
+            : {}),
           durationMs: Date.now() - started,
         });
         throw error;

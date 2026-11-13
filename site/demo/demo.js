@@ -226,7 +226,19 @@ function tool(event) {
         : labels[event.name] || '已执行操作';
       inline
         .querySelector('.tool-inline-detail')
-        .append(element('pre', '', JSON.stringify(event.result ?? event.error, null, 2)));
+        .append(
+          element(
+            'pre',
+            '',
+            JSON.stringify(
+              failed && event.errorDetails
+                ? { message: event.error, code: event.errorCode, details: event.errorDetails }
+                : (event.result ?? event.error),
+              null,
+              2,
+            ),
+          ),
+        );
       updateExecutionGroup(inline);
     }
     const targets = event.result?.targets;
