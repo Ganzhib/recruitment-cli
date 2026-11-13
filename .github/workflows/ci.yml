@@ -21,4 +21,3 @@ jobs:
       - run: npm run test:browser
       - run: npm run smoke
       - run: npm run check:package
-      - run: npm run build:site

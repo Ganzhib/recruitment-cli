@@ -51,3 +51,6 @@ export {
   type RecruitmentToolEvent,
   type ToolPolicy,
 } from './services/agent-tools.js';
+
+export { createDemoServer } from './runtime/demo-server.js';
+export { runDemoAgent, type AgentConfig, type AgentMessage } from './services/demo-agent.js';

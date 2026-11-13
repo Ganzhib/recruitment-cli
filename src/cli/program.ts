@@ -1,5 +1,8 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { once } from 'node:events';
+import { createDemoServer } from '../runtime/demo-server.js';
 import { Command, CommanderError } from 'commander';
 import { z } from 'zod';
 import type { Platform } from '../core/platform.js';
@@ -87,6 +90,24 @@ export function createRecruitProgram(options: ProgramOptions = {}): Command {
       platforms: options.platforms ?? defaultPlatforms(sites),
     });
   };
+  program
+    .command('demo')
+    .description('启动 API Key 驱动的本地 AI 招聘工作台')
+    .option('--port <number>', '本地端口', process.env.RECRUIT_DEMO_PORT ?? '4318')
+    .action(async (flags: { port: string }) => {
+      const port = z.coerce.number().int().min(1024).max(65535).parse(flags.port);
+      let root = fileURLToPath(new URL('../site/', import.meta.url));
+      try {
+        await access(resolve(root, 'demo/index.html'));
+      } catch {
+        root = fileURLToPath(new URL('../../site/', import.meta.url));
+        await access(resolve(root, 'demo/index.html'));
+      }
+      const server = createDemoServer({ client: await client(), root });
+      server.listen(port, '127.0.0.1');
+      await once(server, 'listening');
+      emit({ url: `http://127.0.0.1:${port}/demo/` });
+    });
   const platform = program.command('platform').description('平台能力发现');
   platform.command('list').action(async () => emit((await client()).registry.describe()));
   platform

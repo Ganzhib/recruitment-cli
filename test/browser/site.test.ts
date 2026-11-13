@@ -109,7 +109,10 @@ test('onboarding follows three audiences and the entire banner-navigation group 
     assert.match(await page.locator('#audience-description').innerText(), /WorkBuddy/);
     assert.match(await page.locator('#audience-code').innerText(), /先不发招呼/);
     await page.locator('#audience-terminal').click();
-    assert.match(await page.locator('#audience-code').innerText(), /node dist\/recruit.js/);
+    assert.match(
+      await page.locator('#audience-code').innerText(),
+      /npm install -g @ganzhibin\/recruitment-cli/,
+    );
     await page.locator('#audience-terminal').press('ArrowLeft');
     assert.equal(await page.locator('#audience-agent').getAttribute('aria-selected'), 'true');
     await page.locator('#agents').scrollIntoViewIfNeeded();
@@ -126,5 +129,37 @@ test('onboarding follows three audiences and the entire banner-navigation group 
       }),
       true,
     );
+  });
+});
+
+test('installation prompt is prominent and local demo requires a model before chatting', async () => {
+  await browser('', async (_context, page) => {
+    await page.goto('https://pages.example.test/recruitment-cli/');
+    await page.locator('.hero-actions a').first().click();
+    assert.match(page.url(), /#install$/);
+    assert.match(await page.locator('#install-prompt').innerText(), /npm install -g @ganzhibin/);
+    assert.match(await page.locator('#install-prompt').innerText(), /recruit demo/);
+  });
+  const local = fixtureBrowser(async (route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname !== '127.0.0.1') return route.abort();
+    if (url.pathname === '/api/config') return route.fulfill({ json: { configured: false } });
+    const name = url.pathname === '/demo/' ? 'demo/index.html' : url.pathname.slice(1);
+    return route.fulfill({
+      body: await readFile(resolve('site', name)),
+      contentType: name.endsWith('.html')
+        ? 'text/html'
+        : name.endsWith('.js')
+          ? 'text/javascript'
+          : 'text/css',
+    });
+  });
+  await local('', async (_context, page) => {
+    await page.goto('http://127.0.0.1:4318/demo/');
+    await page.locator('#message-input').fill('帮我自动打招呼');
+    await page.locator('#send-button').click();
+    assert.equal(await page.locator('#settings-dialog').isVisible(), true);
+    assert.equal(await page.locator('.tool-card').count(), 0);
+    assert.equal(await page.locator('#messages').innerText(), '');
   });
 });

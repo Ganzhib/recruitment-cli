@@ -87,7 +87,7 @@ const audiences = {
     title: '把招聘能力接进现有业务。',
     description: '像这个 Chat Demo 一样，复用 client 与工具接口，搭建你自己的产品流程。',
     steps: [
-      ['准备业务依赖', '从当前源码构建包，在你的业务项目中引入公共入口。'],
+      ['准备业务依赖', '安装 @ganzhibin/recruitment-cli，在你的业务项目中引入公共入口。'],
       ['连接账号与工作流', '完成账号初始化，按业务需要调用搜索、计划与执行能力。'],
       ['呈现你自己的产品体验', '把结构化结果与调用事件接入已有页面、服务或 Agent。'],
     ],
@@ -117,12 +117,14 @@ const result = await recruit.search(
       'WorkBuddy、Trace、豆包、Codex、Claude Code 等助手，可以从本机命令或工具接口接入。',
     steps: [
       ['选择具备本机操作能力的模式', '让助手使用本机终端；接入型 Agent 也可以调用工具 HTTP 接口。'],
-      ['让助手准备工具与账号', '复制右侧提示词，按当前源码说明安装，再由你完成平台扫码。'],
+      ['让助手准备工具与账号', '复制安装提示词，安装 npm 包，再由你完成平台扫码。'],
       ['交给它第一项明确任务', '提供岗位、城市和近期活跃要求，先看整理结果，再安排沟通。'],
     ],
     code: `请帮我安装并配置 recruitment-cli。
-先读取 GitHub 当前说明，按源码预览版
-准备 Node.js 22.16+ 和 Chrome，完成构建。
+先读取 GitHub 当前说明，检查 Node.js 22.16+ 和 Chrome。
+优先安装 @ganzhibin/recruitment-cli@latest，
+运行 recruit --help 和 recruit schema 核验命令。
+用 recruit --version 核验，运行 recruit demo 连接 API Key。
 
 引导我扫码登录，识别我的当前身份。
 按我给的岗位、城市和近期活跃要求
@@ -143,23 +145,22 @@ https://github.com/Ganzhib/recruitment-cli`,
     title: '喜欢命令行，就直接开始。',
     description: '扫码、搜索、计划和回执，用一套连贯的命令完成。也可以按自己的习惯组合脚本。',
     steps: [
-      ['获取源码并构建', '当前是源码预览版，在项目目录安装依赖并构建。'],
+      ['安装 npm 包', '安装后即可使用 recruit 命令和内置 AI Demo。'],
       ['扫码连接平台', '运行登录命令，工具会自动识别求职者或招聘者身份。'],
       ['先搜索，再形成沟通计划', '从一个明确岗位开始，用 dry-run 查看计划，准备好后再执行。'],
     ],
-    code: `# 在源码目录中
-npm ci
-npm run build
+    code: `npm install -g @ganzhibin/recruitment-cli@latest
+recruit demo
 
-node dist/recruit.js auth login boss
+recruit auth login boss
 
-node dist/recruit.js search "前端" \
+recruit search "前端" \
   --platform boss --active-within 7d -n 5
 
-node dist/recruit.js greet "前端" \
+recruit greet "前端" \
   --platform boss --dry-run`,
-    example: '终端 · 从源码开始',
-    note: '可运行 npm link 安装 recruit 命令。使用 --help 和 schema 查看实际参数，--json 便于脚本处理。',
+    example: '终端 · npm 安装后即可使用',
+    note: '通过 npm 安装 CLI；源码开发可用 npm link。使用 --help 和 schema 查看实际参数，--json 便于脚本处理。',
     primary: '查看完整命令文档 ↗',
     primaryHref: 'https://github.com/Ganzhib/recruitment-cli/blob/main/README.md#开始使用',
     secondary: '查看 API 与 schema ↗',
@@ -216,3 +217,13 @@ document.querySelector('#copy-audience').addEventListener('click', async () => {
   }
 });
 selectAudience('business');
+
+document.querySelector('#copy-install').addEventListener('click', async () => {
+  const status = document.querySelector('#install-copy-status');
+  try {
+    await navigator.clipboard.writeText(document.querySelector('#install-prompt').textContent);
+    status.textContent = '已复制，粘贴给能操作本机的 AI 助手即可。';
+  } catch {
+    status.textContent = '请选中上方提示词，手动复制给你的 AI 助手。';
+  }
+});

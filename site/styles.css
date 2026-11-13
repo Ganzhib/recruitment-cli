@@ -1825,3 +1825,19 @@ html {
     font-size: 10px;
   }
 }
+
+.install-section {
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+#install-prompt {
+  color: #c4d8ee;
+  font-size: 14px;
+  line-height: 1.9;
+  padding: 24px;
+  overflow-wrap: anywhere;
+}
+.install-section pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

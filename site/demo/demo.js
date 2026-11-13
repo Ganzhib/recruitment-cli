@@ -276,6 +276,10 @@ async function chat(text) {
 }
 async function submit(text) {
   if (!text.trim() || state.busy) return;
+  if (state.local && !state.configured) {
+    $('#settings-dialog').showModal();
+    return;
+  }
   state.busy = true;
   $('#send-button').disabled = true;
   $('#message-input').value = '';
@@ -341,6 +345,7 @@ function connected(model) {
   $('#settings-open').firstChild.textContent = '连接设置 ';
   $('#context-role').textContent = '真实 Agent · BOSS 直聘';
   $('#permission-label').hidden = false;
+  $('#live-actions').hidden = false;
   $('#platform-label').hidden = false;
   $('#sample-label').hidden = true;
   $('#composer-note').textContent =
@@ -364,10 +369,26 @@ async function initialize() {
     $('#agent-base').value = config.baseUrl;
     $('#agent-model').value = config.model;
     if (config.configured) connected(config.model);
+    else {
+      $('#mode-badge').textContent = '本地工作台 · 待连接模型';
+      $('#composer-note').textContent = '先连接模型 API Key，再让 AI 筛选和自动打招呼。';
+      $('#sample-label').textContent = '等待连接真实模型';
+    }
   } catch {
     $('#composer-note').textContent =
-      '本地服务未连接。当前只能查看示例，请确认使用 npm run demo 启动。';
+      '本地服务未连接。当前只能查看示例，请确认使用 recruit demo 启动。';
   }
 }
 if (new URLSearchParams(location.search).get('role') === 'recruiter') role('recruiter');
 initialize();
+
+$('#login-account').addEventListener('click', () =>
+  submit('请打开 BOSS 扫码登录，读取我的实际账号和当前身份。'),
+);
+$('#auto-greet').addEventListener('click', () => {
+  if (state.busy) return;
+  $('#message-input').value =
+    '请按刚才确定的岗位、城市和数量筛选，展示沟通计划后自动使用平台预制招呼语打招呼，并返回执行回执。条件不完整时先问我。';
+  $('#allow-contact').checked = true;
+  $('#message-input').focus();
+});

@@ -37,7 +37,7 @@
 | 公司招聘官网          | 根据站点配置读取公开职位列表与详情                                 | 只读职位发现，不提交投递表单                                     |
 | AI 对话与第三方 Agent | 可视化工具调用、兼容模型工具调用接口、业务能力导出                 | 在线 Demo 是虚构示例，真实操作在本地连接                         |
 
-平台能力、账号权限与页面变化仍由对应平台决定。具体边界见 [真实平台验收](docs/LIVE_ACCEPTANCE.md)。当前是源码预览版，尚未发布 npm 安装包。
+平台能力、账号权限与页面变化仍由对应平台决定。具体边界见 [真实平台验收](docs/LIVE_ACCEPTANCE.md)。CLI 与本地 AI Demo 通过 npm 包一起安装。
 
 ## 试着这样对 AI 说
 
@@ -47,14 +47,28 @@
 
 > 按已经整理好的这份计划，使用我在 BOSS 里配置的招呼语发起沟通。完成后告诉我哪些成功、哪些跳过、哪些还需要核实，不重复联系已处理的目标。
 
-## 对话 Demo
+## npm 安装与本地 AI Demo
+
+npm 包名为 `@ganzhibin/recruitment-cli`，安装后的命令为 `recruit`。安装命令：
+
+```bash
+npm install -g @ganzhibin/recruitment-cli@latest
+recruit --version
+recruit demo
+```
+
+Demo 页面随 npm 包分发，不需要下载源码或安装开发依赖。浏览器打开输出的本机地址，填写模型服务地址、模型名称和 API Key，点击「扫码登录 BOSS」；说明岗位、城市与数量后，点击「准备自动打招呼指令」并发送。AI 会在本轮沟通权限开启时生成并执行计划，显示真实工具调用与回执。默认使用平台预制招呼语。
+
+也可以用 `recruit --home <directory> --sites <sites.json> demo --port 4319` 指定数据目录、官网配置和端口。API Key 只在服务内存中保存。
+
+## 从源码运行对话 Demo
 
 ```bash
 npm ci
 npm run demo
 ```
 
-打开 `http://127.0.0.1:4318/`。可先体验明确标识的虚构示例，再连接支持工具调用的兼容模型接口。右侧展示真实工具调用、对应 CLI 命令、参数与回执。第三方 Agent 可以通过工具 HTTP 接口，或从包根导入 `createRecruitmentTools` 接入相同能力。真实沟通权限由当前使用者明确开启，模型不能自行授予。
+打开 `http://127.0.0.1:4318/`。连接支持工具调用的兼容模型接口后，即可使用真实 AI 工作流。公开官网另有明确标识的虚构流程预览。右侧展示真实工具调用、对应 CLI 命令、参数与回执。第三方 Agent 可以通过工具 HTTP 接口，或从包根导入 `createRecruitmentTools` 接入相同能力。真实沟通权限由当前使用者明确开启，模型不能自行授予。
 
 ## 开始使用
 
@@ -62,22 +76,22 @@ npm run demo
 
 把这段话交给能操作你本机的 AI 助手：
 
-> 请帮我安装并配置 recruitment-cli（求职与招聘助手，命令为 recruit）。先读取 https://github.com/Ganzhib/recruitment-cli 的当前说明；目前是源码预览版，按仓库说明获取 main 分支源码，检查 Node.js 22.16+ 与 Chrome/Chromium，然后安装依赖、构建并核验版本和实际命令 schema，不编造 npm 安装包或未支持的命令。复用已有兼容环境。先确认我要使用的账号与场景，引导我扫码登录 BOSS，读取实际用户与当前身份，再根据我的岗位方向、城市和近期活跃要求准备筛选结果。这次只安装、登录和读取，不发招呼；之后按我的明确安排执行沟通计划。不要索取或展示 Cookie、密码、验证码。最后告诉我安装位置、当前账号身份、已验证的能力和未完成事项。
+> 请帮我安装并配置 recruitment-cli（求职与招聘助手，命令为 recruit）。先读取 https://github.com/Ganzhib/recruitment-cli 的当前说明；检查 Node.js 22.16+ 与 Chrome/Chromium，然后运行 npm install -g @ganzhibin/recruitment-cli@latest，使用 recruit --version、recruit --help 和 recruit schema 核验版本和实际命令；运行 recruit demo，在本地页面配置模型服务地址、模型名称与 API Key。复用已有兼容环境。先确认我要使用的账号与场景，引导我扫码登录 BOSS，读取实际用户与当前身份，再根据我的岗位方向、城市和近期活跃要求准备筛选结果。这次只安装、登录和读取，不发招呼；之后按我的明确安排执行沟通计划。不要索取或展示 Cookie、密码、验证码。最后告诉我安装位置、当前账号身份、已验证的能力和未完成事项。
 
 ### 自行安装与登录
 
 要求 Node.js ≥ 22.16，并已安装 Chrome 或 Chromium。
 
 ```bash
-npm install
-npm run build
-node dist/recruit.js --help
-node dist/recruit.js auth login boss
+npm install -g @ganzhibin/recruitment-cli@latest
+recruit --help
+recruit auth login boss
+recruit demo
 ```
 
 登录时会打开独立浏览器。扫码后，CLI 根据实际进入的求职端或招聘端识别当前身份，并读取平台用户 ID 完成账号绑定。无需指定 `--role`、提取 Cookie 或手动启动调试服务。登录窗口最长等待三分钟。
 
-以下示例使用 `recruit`；源码环境可替换为 `node dist/recruit.js`。`npm link` 可在本地安装命令。该包尚未发布到 npm。
+以下示例使用 `recruit`；源码环境可替换为 `node dist/recruit.js`。`npm link` 可在本地安装命令。本地 Demo 可使用 `recruit demo` 启动。
 
 ## 先筛选，再使用平台预制招呼语联系
 

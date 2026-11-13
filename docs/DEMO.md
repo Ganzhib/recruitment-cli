@@ -2,20 +2,22 @@
 
 ## 运行
 
+安装 npm 包后，直接运行 `recruit demo`（自定义端口：`recruit demo --port 4319`）。页面、模型工具调用服务和 CLI 一起分发，不依赖源码。也可以在源码目录使用下面的命令。
+
 ```bash
 npm ci
 npm run demo
 ```
 
-打开 `http://127.0.0.1:4318/`。入口服务是 `site/demo/demo.ts`，页面位于 `site/demo/index.html`。`RECRUIT_DEMO_PORT` 可以指定其他本地端口。
+打开 `http://127.0.0.1:4318/`。入口命令是 `recruit demo`，HTTP 服务在 `src/runtime/demo-server.ts`，模型循环在 `src/services/demo-agent.ts`，页面位于 `site/demo/index.html`。`RECRUIT_DEMO_PORT` 可以指定其他本地端口。
 
-未连接模型时，页面明确显示预设示例工作流，数据均为虚构，不调用真实招聘平台。GitHub Pages 上的 Demo 也使用该模式。连接模型后，聊天请求由真实模型生成工具调用，服务复用包根导出的 client 执行，页面显示工具参数、对应 CLI 命令和返回回执。
+GitHub Pages 展示带有明确标识的虚构示例，不调用真实招聘平台。本地 Demo 未连接模型时提示配置，不会生成预设回复。连接模型后，聊天请求由真实模型生成工具调用，服务复用包根导出的 client 执行，页面显示工具参数、对应 CLI 命令和返回回执。
 
 `--options <options.json>` 在工具面板中表示同名 JSON 文件占位符，实际工具请求使用结构化 `options`。Demo 不启动 shell，也不执行模型生成的任意命令字符串。
 
 ## 连接模型
 
-点击「连接 Agent」，填入服务的 Base URL、模型 ID 和 API Key。服务需支持 Chat Completions 的 `tools` / `tool_calls` 协议。远程地址必须使用 HTTPS，本机服务可使用 `http://127.0.0.1` 或 `http://localhost`。
+本地页面不会用预设回复代替未连接的 AI。点击「连接 Agent」，填入服务的 Base URL、模型 ID 和 API Key。服务需支持 Chat Completions 的 `tools` / `tool_calls` 协议。远程地址必须使用 HTTPS，本机服务可使用 `http://127.0.0.1` 或 `http://localhost`。
 
 也可以使用环境变量：
 
@@ -29,6 +31,16 @@ npm run demo
 配置仅保存在当前 Demo 服务内存中，GET 接口不返回 API Key，页面不使用 localStorage 保存密钥。连接远程模型后，对话与工具结果会发送到使用者配置的模型服务，请使用你允许处理这些数据的服务。当前默认使用 Chat Completions 以兼容第三方服务；具体模型需支持函数工具调用。
 
 对话会话仅保留在本进程内存中。刷新页面或重新启动服务后会开始新对话。模型调用每轮最多 8 次，单次请求超时为 60 秒。没有配置模型或调用失败时，不会使用假回复冒充真实 AI。
+
+## 自动打招呼
+
+1. 配置 API Key、Base URL 与支持工具调用的模型。
+2. 点击「扫码登录 BOSS」，在浏览器完成登录，AI 读取真实账号与身份。
+3. 给出岗位、城市、活跃时间和数量；招聘者还需选定目标岗位。
+4. 点击「准备自动打招呼指令」，核对输入框内容后发送。该按钮会开启本轮沟通权限；也可以手动勾选并输入指令。
+5. AI 在同一轮准备计划、执行预制招呼语、返回回执。下一轮权限自动关闭。重复目标和结果不明的发送不会重发。
+
+本地的 `--home` 与 `--sites` 同样作用于 Demo。GitHub Pages 为静态流程预览，真实 AI 和招聘平台操作在本机工作台运行。
 
 ## 工具 HTTP 接口
 

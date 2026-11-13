@@ -86,6 +86,10 @@
               </select></label
             ><span class="sample-label" id="sample-label">示例不连接真实账号</span>
           </div>
+          <div id="live-actions" hidden>
+            <button type="button" class="outline-button" id="login-account">扫码登录 BOSS</button>
+            <button type="button" class="outline-button" id="auto-greet">准备自动打招呼指令</button>
+          </div>
           <form id="chat-form" class="composer">
             <textarea
               id="message-input"
@@ -139,8 +143,9 @@
           连接支持工具调用的兼容模型服务。密钥只保存在本地 Demo 服务的内存中。
         </p>
         <div id="remote-notice" hidden>
-          <p>GitHub Pages 展示公开示例。要让 Agent 操作本机 CLI，请在项目中运行：</p>
-          <code>npm ci &amp;&amp; npm run demo</code>
+          <p>GitHub Pages 展示公开示例。要连接真实 API Key 并自动打招呼，安装 CLI 后运行：</p>
+          <code>recruit demo</code>
+          <p>也可以在源码目录运行 npm ci &amp;&amp; npm run demo。</p>
           <p>然后打开 <a href="http://127.0.0.1:4318/">http://127.0.0.1:4318/</a>。</p>
         </div>
         <fieldset id="agent-fields">

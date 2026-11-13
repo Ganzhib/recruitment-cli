@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { createDemoServer } from '../site/demo/demo.js';
+import { createDemoServer } from '../src/runtime/demo-server.js';
 import { createRecruitmentClient } from '../src/index.js';
 import { fakePlatform, temporaryHome } from './helpers.js';
 
@@ -22,6 +22,7 @@ test('demo serves assets, exposes tools, rejects cross-origin access and keeps k
   temporaryHome(async (home) => {
     const { platform } = fakePlatform();
     const server = createDemoServer({
+      root: process.cwd() + '/site',
       client: createRecruitmentClient({ home, platforms: [platform] }),
     });
     const base = await serve(server);
@@ -126,3 +127,80 @@ test('real chat completion tool loop emits actual tool events and returns the re
       await close(model);
     }
   }));
+
+for (const scenario of ['allowed', 'denied', 'uncertain'] as const) {
+  test(`AI plans and greets through the shared client: ${scenario}`, async () =>
+    temporaryHome(async (home) => {
+      const { platform, state } = fakePlatform();
+      state.fail = scenario === 'uncertain';
+      const client = createRecruitmentClient({ home, platforms: [platform] });
+      await client.login({ platform: 'test', account: 'main' });
+      let requests = 0;
+      const model = createServer(async (request, response) => {
+        assert.equal(request.headers.authorization, 'Bearer fabricated-test-key');
+        const chunks = [];
+        for await (const chunk of request) chunks.push(chunk);
+        const input = JSON.parse(Buffer.concat(chunks).toString());
+        const toolResults = input.messages.filter((item: { role: string }) => item.role === 'tool');
+        const previous = toolResults.length ? JSON.parse(toolResults.at(-1).content) : undefined;
+        const step = requests++ % 3;
+        const call =
+          step === 0
+            ? {
+                name: 'recruit_plan',
+                arguments: JSON.stringify({ platform: 'test', query: 'TypeScript', limit: 1 }),
+              }
+            : { name: 'recruit_run_plan', arguments: JSON.stringify({ planId: previous?.id }) };
+        response.setHeader('Content-Type', 'application/json');
+        response.end(
+          JSON.stringify({
+            choices: [
+              {
+                message:
+                  step === 2
+                    ? { role: 'assistant', content: JSON.stringify(previous) }
+                    : {
+                        role: 'assistant',
+                        content: null,
+                        tool_calls: [{ id: 'call-' + requests, type: 'function', function: call }],
+                      },
+              },
+            ],
+          }),
+        );
+      });
+      const endpoint = await serve(model);
+      const demo = createDemoServer({
+        client,
+        config: { baseUrl: endpoint, model: 'fixture-model', apiKey: 'fabricated-test-key' },
+      });
+      const base = await serve(demo);
+      try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const response = await fetch(base + '/api/chat', {
+            method: 'POST',
+            body: JSON.stringify({
+              message: '筛选并自动打招呼',
+              platform: 'test',
+              allowContact: scenario !== 'denied',
+            }),
+          });
+          const events = await response.text();
+          assert.match(events, /"type":"done"/);
+          assert.match(
+            events,
+            scenario === 'denied' ? /未开启/ : scenario === 'uncertain' ? /indeterminate/ : /sent/,
+          );
+          assert.equal(events.includes('fabricated-test-key'), false);
+        }
+        assert.equal(state.sends.length, scenario === 'denied' ? 0 : 1);
+        const history = await client.history({ platform: 'test', account: 'main' });
+        assert.equal(history.length, scenario === 'denied' ? 0 : 1);
+        if (history.length)
+          assert.equal(history[0].state, scenario === 'uncertain' ? 'indeterminate' : 'sent');
+      } finally {
+        await close(demo);
+        await close(model);
+      }
+    }));
+}

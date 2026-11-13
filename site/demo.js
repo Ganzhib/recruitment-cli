@@ -1,0 +1,373 @@
+const $ = (selector) => document.querySelector(selector);
+const state = {
+  local: false,
+  configured: false,
+  role: 'seeker',
+  conversationId: undefined,
+  busy: false,
+  tools: new Map(),
+};
+const names = {
+  recruit_platforms: '发现可用平台',
+  recruit_accounts: '读取账号',
+  recruit_login: '扫码登录',
+  recruit_status: '确认当前身份',
+  recruit_positions: '选择招聘岗位',
+  recruit_search: '筛选匹配结果',
+  recruit_plan: '整理沟通计划',
+  recruit_plan_get: '查看计划',
+  recruit_run_plan: '执行沟通计划',
+  recruit_history: '核对沟通回执',
+};
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function scrollChat() {
+  $('#chat-scroll').scrollTop = $('#chat-scroll').scrollHeight;
+}
+function message(role, text) {
+  $('#welcome').hidden = true;
+  const row = element('article', 'message ' + role);
+  row.append(element('div', 'message-avatar', role === 'user' ? '你' : 'r.'));
+  const content = element('div');
+  content.append(
+    element(
+      'div',
+      'message-label',
+      role === 'user' ? '你' : state.configured ? '招聘助手' : '预设流程演示',
+    ),
+  );
+  content.append(element('div', 'message-content', text));
+  row.append(content);
+  $('#messages').append(row);
+  scrollChat();
+  return content;
+}
+function results(container, targets) {
+  const list = element('div', 'message-result');
+  targets.slice(0, 6).forEach((target) => {
+    const card = element('div', 'result-card');
+    card.append(element('span', 'result-badge', target.activity?.label || '待确认'));
+    card.append(
+      element(
+        'h4',
+        '',
+        target.kind === 'candidate' ? `${target.name} · ${target.title}` : target.title,
+      ),
+    );
+    card.append(
+      element(
+        'p',
+        '',
+        [target.organization, target.location, target.summary]
+          .filter(Boolean)
+          .join(' · ')
+          .slice(0, 150),
+      ),
+    );
+    list.append(card);
+  });
+  container.append(list);
+  scrollChat();
+}
+function tool(event) {
+  $('#activity-empty').hidden = true;
+  if (event.type === 'tool.start') {
+    const card = element('article', 'tool-card');
+    const heading = element('div', 'tool-heading');
+    heading.append(
+      element('span', '', names[event.name] || event.name),
+      element('span', 'tool-state', '执行中'),
+    );
+    card.append(heading, element('div', 'tool-command', '$ ' + event.command));
+    const details = element('details');
+    details.append(
+      element('summary', '', '查看参数'),
+      element('pre', '', JSON.stringify(event.input, null, 2)),
+    );
+    card.append(details);
+    state.tools.set(event.id, card);
+    $('#activity-list').append(card);
+    $('#activity-count').textContent = String(state.tools.size);
+  } else {
+    const card = state.tools.get(event.id);
+    if (!card) return;
+    card.querySelector('.tool-state').textContent =
+      event.type === 'tool.error' ? '需处理' : `完成 · ${event.durationMs ?? 0}ms`;
+    if (event.type === 'tool.error') card.classList.add('failed');
+    const details = element('details');
+    details.append(
+      element('summary', '', event.type === 'tool.error' ? '查看问题' : '查看回执'),
+      element('pre', '', JSON.stringify(event.result ?? event.error, null, 2)),
+    );
+    card.append(details);
+    const targets = event.result?.targets;
+    if (targets?.length) {
+      const last = $('#messages').lastElementChild?.lastElementChild;
+      if (last) results(last, targets);
+    }
+  }
+  $('#activity-list').scrollTop = $('#activity-list').scrollHeight;
+}
+function reset() {
+  if (state.busy) return;
+  state.conversationId = undefined;
+  $('#allow-contact').checked = false;
+  state.tools.clear();
+  $('#messages').replaceChildren();
+  $('#activity-list').replaceChildren();
+  $('#activity-count').textContent = '0';
+  $('#activity-empty').hidden = false;
+  $('#welcome').hidden = false;
+}
+function role(role) {
+  reset();
+  state.role = role;
+  document
+    .querySelectorAll('[data-scenario]')
+    .forEach((button) => button.classList.toggle('selected', button.dataset.scenario === role));
+  $('#context-role').textContent = state.configured
+    ? '真实 Agent · BOSS 直聘'
+    : role === 'seeker'
+      ? '求职者示例'
+      : '招聘者示例';
+  $('#message-input').placeholder =
+    role === 'seeker' ? '描述你正在寻找的机会…' : '描述你正在寻找的人…';
+}
+async function sample(text) {
+  message('user', text);
+  const response = message(
+    'assistant',
+    '正在展示一个预设工作流。以下公司、人员与结果均为虚构示例，不会联系真实用户。',
+  );
+  const targets =
+    state.role === 'seeker'
+      ? [
+          {
+            kind: 'job',
+            title: '前端工程师',
+            organization: '栖云科技（虚构）',
+            location: '上海',
+            summary: 'React / TypeScript · 25–35K',
+            activity: { label: '刚刚活跃' },
+          },
+          {
+            kind: 'job',
+            title: '高级前端开发',
+            organization: '向野工作室（虚构）',
+            location: '上海',
+            summary: '产品体验 / 工程化 · 30–40K',
+            activity: { label: '今日活跃' },
+          },
+          {
+            kind: 'job',
+            title: '前端研发工程师',
+            organization: '方舟实验室（虚构）',
+            location: '上海',
+            summary: 'TypeScript / 可视化 · 25–40K',
+            activity: { label: '3 日内活跃' },
+          },
+        ]
+      : [
+          {
+            kind: 'candidate',
+            name: '示例候选人 A',
+            title: '前端开发',
+            organization: '',
+            location: '上海',
+            summary: 'React / TypeScript · 5 年相关经验',
+            activity: { label: '在线' },
+          },
+          {
+            kind: 'candidate',
+            name: '示例候选人 B',
+            title: '前端工程师',
+            organization: '',
+            location: '上海',
+            summary: '工程化 / 组件库 · 4 年相关经验',
+            activity: { label: '今日活跃' },
+          },
+          {
+            kind: 'candidate',
+            name: '示例候选人 C',
+            title: '高级前端',
+            organization: '',
+            location: '上海',
+            summary: 'TypeScript / 可视化 · 6 年相关经验',
+            activity: { label: '3 日内活跃' },
+          },
+        ];
+  const steps = [
+    {
+      name: 'recruit_status',
+      command: 'recruit auth status boss',
+      input: { platform: 'boss' },
+      result: { role: state.role, name: '演示账号', simulated: true },
+    },
+    {
+      name: 'recruit_search',
+      command: 'recruit search "前端" --platform boss --city 上海 --active-within 7d -n 3',
+      input: {
+        query: '前端',
+        city: '上海',
+        activeWithin: '7d',
+        limit: 3,
+        ...(state.role === 'recruiter' ? { options: { job: '示例岗位' } } : {}),
+      },
+      result: { matched: 3, scanned: 12, simulated: true },
+    },
+    {
+      name: 'recruit_plan',
+      command: 'recruit plan create "前端" --platform boss -n 3',
+      input: { query: '前端', activeWithin: '7d', limit: 3 },
+      result: { planId: 'demo-plan', state: 'ready', count: 3, simulated: true },
+    },
+  ];
+  for (const [index, step] of steps.entries()) {
+    const id = 'demo-' + Date.now() + '-' + index;
+    tool({ ...step, id, type: 'tool.start' });
+    await new Promise((resolve) => setTimeout(resolve, 330));
+    tool({ ...step, id, type: 'tool.result', durationMs: 330 });
+  }
+  results(response, targets);
+  message(
+    'assistant',
+    '示例已整理出 3 个近期活跃的匹配结果，并生成沟通计划。真实使用时，Agent 会读取本机 CLI 的实际结果；只有你开启本轮沟通权限后，才会执行平台预制招呼语。\n\n点击「连接 Agent」，可以查看本地运行和接入方式。',
+  );
+}
+async function chat(text) {
+  message('user', text);
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      conversationId: state.conversationId,
+      message: text,
+      platform: $('#platform').value,
+      allowContact: $('#allow-contact').checked,
+    }),
+  });
+  if (!response.ok) {
+    const problem = await response.json();
+    throw new Error(problem.error);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let end;
+    while ((end = buffer.indexOf('\n\n')) >= 0) {
+      const frame = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      if (!frame.startsWith('data: ')) continue;
+      const event = JSON.parse(frame.slice(6));
+      if (event.type === 'session') state.conversationId = event.conversationId;
+      if (event.type === 'message') message('assistant', event.content);
+      if (event.type.startsWith('tool.')) tool(event);
+      if (event.type === 'error') message('error', event.message);
+    }
+  }
+}
+async function submit(text) {
+  if (!text.trim() || state.busy) return;
+  state.busy = true;
+  $('#send-button').disabled = true;
+  $('#message-input').value = '';
+  try {
+    if (state.configured) await chat(text.trim());
+    else await sample(text.trim());
+  } catch (error) {
+    message('error', error.message);
+  } finally {
+    state.busy = false;
+    $('#allow-contact').checked = false;
+    $('#send-button').disabled = false;
+    $('#message-input').focus();
+  }
+}
+$('#chat-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  submit($('#message-input').value);
+});
+$('#message-input').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    submit(event.currentTarget.value);
+  }
+});
+document.querySelectorAll('[data-prompt]').forEach((button) =>
+  button.addEventListener('click', () => {
+    role(button.dataset.role);
+    submit(button.dataset.prompt);
+  }),
+);
+document.querySelectorAll('[data-scenario]').forEach((button) =>
+  button.addEventListener('click', () => {
+    if (!state.busy) role(button.dataset.scenario);
+  }),
+);
+$('#new-chat').addEventListener('click', reset);
+$('#settings-open').addEventListener('click', () => $('#settings-dialog').showModal());
+$('#settings-close').addEventListener('click', () => $('#settings-dialog').close());
+$('#settings-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!state.local) return;
+  $('#settings-error').textContent = '';
+  try {
+    const response = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    $('#agent-key').value = '';
+    state.configured = true;
+    connected(result.model);
+    reset();
+    $('#settings-dialog').close();
+  } catch (error) {
+    $('#settings-error').textContent = error.message;
+  }
+});
+function connected(model) {
+  $('#mode-badge').textContent = model + ' · 已连接';
+  $('#settings-open').firstChild.textContent = '连接设置 ';
+  $('#context-role').textContent = '真实 Agent · BOSS 直聘';
+  $('#permission-label').hidden = false;
+  $('#platform-label').hidden = false;
+  $('#sample-label').hidden = true;
+  $('#composer-note').textContent =
+    '工具调用由真实 Agent 决定。开启权限前只读取与准备计划，不发起沟通。';
+}
+async function initialize() {
+  state.local = location.hostname === '127.0.0.1';
+  if (!state.local) {
+    $('#remote-notice').hidden = false;
+    $('#agent-fields').hidden = true;
+    $('#agent-fields').disabled = true;
+    $('#settings-save').hidden = true;
+    $('#settings-intro').textContent =
+      '你正在浏览 GitHub Pages 交互演示。示例内容不会连接真实账号。';
+    return;
+  }
+  try {
+    const response = await fetch('/api/config');
+    const config = await response.json();
+    state.configured = config.configured;
+    $('#agent-base').value = config.baseUrl;
+    $('#agent-model').value = config.model;
+    if (config.configured) connected(config.model);
+  } catch {
+    $('#composer-note').textContent =
+      '本地服务未连接。当前只能查看示例，请确认使用 npm run demo 启动。';
+  }
+}
+if (new URLSearchParams(location.search).get('role') === 'recruiter') role('recruiter');
+initialize();

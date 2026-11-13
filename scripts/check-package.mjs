@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,6 +24,10 @@ try {
     'dist/index.js',
     'dist/index.d.ts',
     'dist/recruit.js',
+    'dist/runtime/demo-server.js',
+    'dist/services/demo-agent.js',
+    'dist/site/demo/index.html',
+    'dist/site/demo/demo.js',
     'README.md',
     'LICENSE',
   ])
@@ -77,6 +81,48 @@ try {
   });
   assert.equal(command.status, 0, command.stderr);
   assert.equal(JSON.parse(command.stdout).ok, true);
+  // Start the installed executable outside the repository to prove the demo is self-contained.
+  const { createServer } = await import('node:net');
+  const probe = createServer();
+  await new Promise((resolve) => probe.listen(0, '127.0.0.1', resolve));
+  const port = probe.address().port;
+  await new Promise((resolve) => probe.close(resolve));
+  const demo = spawn(
+    process.execPath,
+    [
+      join(directory, 'node_modules/@ganzhibin/recruitment-cli/dist/recruit.js'),
+      'demo',
+      '--port',
+      String(port),
+    ],
+    { cwd: directory, stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  try {
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Packaged demo did not start')), 15000);
+      demo.stdout.once('data', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+      demo.once('error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+      demo.once('exit', (code) => {
+        clearTimeout(timeout);
+        reject(new Error('Demo exited: ' + code));
+      });
+    });
+    const base = `http://127.0.0.1:${port}`;
+    for (const path of ['/demo/', '/demo/demo.js', '/demo/demo.css', '/index.html']) {
+      assert.equal((await fetch(base + path)).status, 200, path);
+    }
+    assert.equal((await (await fetch(base + '/api/tools')).json()).tools.length > 0, true);
+  } finally {
+    const exited = new Promise((resolve) => demo.once('exit', resolve));
+    demo.kill();
+    await exited;
+  }
   console.log(`Packaged CLI and root SDK imports passed (${files.length} files).`);
 } finally {
   await rm(directory, { recursive: true, force: true });
