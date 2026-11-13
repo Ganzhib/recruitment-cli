@@ -269,10 +269,16 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
       assert.equal(await page.locator('#status-orb').getAttribute('data-state'), 'breathing');
       assert.equal(await page.locator('#allow-contact').isChecked(), false);
       assert.equal(await page.locator('.tool-inline').count(), 1);
+      assert.equal(await page.locator('.execution-group').getAttribute('open'), null);
+      assert.equal(await page.locator('.execution-steps').isVisible(), false);
+      assert.match(await page.locator('.execution-group > summary').innerText(), /已完成筛选/);
+      await page.locator('.execution-group > summary').click();
       assert.match(await page.locator('.tool-inline summary').innerText(), /已完成筛选/);
       await page.locator('.tool-inline summary').click();
       assert.equal(await page.locator('.tool-inline-detail').isVisible(), true);
       await page.locator('.tool-inline summary').click();
+      await page.locator('.execution-group > summary').click();
+      assert.equal(await page.locator('.execution-steps').isVisible(), false);
       assert.equal(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         true,

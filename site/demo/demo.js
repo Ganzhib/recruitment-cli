@@ -11,6 +11,7 @@ const state = {
   busy: false,
   tools: new Map(),
   inlineTools: new Map(),
+  executionGroup: undefined,
 };
 const names = {
   recruit_platforms: '发现可用平台',
@@ -188,7 +189,23 @@ function tool(event) {
     );
     inline.append(summary, detail);
     state.inlineTools.set(event.id, inline);
-    $('#messages').append(inline);
+    if (!state.executionGroup) {
+      const group = element('details', 'execution-group');
+      const heading = element('summary');
+      const groupIcon = element('span', 'tool-inline-icon', '›_');
+      groupIcon.setAttribute('aria-hidden', 'true');
+      heading.append(
+        groupIcon,
+        element('span', 'execution-label'),
+        element('span', 'execution-count'),
+        element('span', 'tool-inline-chevron', '⌄'),
+      );
+      group.append(heading, element('div', 'execution-steps'));
+      $('#messages').append(group);
+      state.executionGroup = group;
+    }
+    state.executionGroup.querySelector('.execution-steps').append(inline);
+    updateExecutionGroup(inline);
     scrollChat();
     $('#activity-list').append(card);
     $('#activity-count').textContent = String(state.tools.size);
@@ -235,6 +252,7 @@ function tool(event) {
       inline
         .querySelector('.tool-inline-detail')
         .append(element('pre', '', JSON.stringify(event.result ?? event.error, null, 2)));
+      updateExecutionGroup(inline);
     }
     const targets = event.result?.targets;
     if (targets?.length) {
@@ -244,11 +262,24 @@ function tool(event) {
   }
   $('#activity-list').scrollTop = $('#activity-list').scrollHeight;
 }
+function updateExecutionGroup(inline) {
+  const group = inline.closest('.execution-group');
+  const steps = [...group.querySelectorAll('.tool-inline')];
+  const running = steps.find((step) => step.dataset.state === 'running');
+  const failures = steps.filter((step) => step.dataset.state === 'error').length;
+  group.dataset.state = running ? 'running' : failures ? 'error' : 'done';
+  group.querySelector('.execution-label').textContent = (running || inline).querySelector(
+    '.tool-inline-label',
+  ).textContent;
+  group.querySelector('.execution-count').textContent =
+    `${steps.length} 步` + (failures ? ` · ${failures} 项需处理` : '');
+}
 function reset() {
   if (state.busy) return;
   state.conversationId = undefined;
   state.tools.clear();
   state.inlineTools.clear();
+  state.executionGroup = undefined;
   $('#messages').replaceChildren();
   $('#activity-list').replaceChildren();
   $('#activity-count').textContent = '0';
@@ -441,6 +472,7 @@ async function submit(text) {
     return;
   }
   state.busy = true;
+  state.executionGroup = undefined;
   status('thinking', state.configured ? '正在思考' : '正在演示');
   $('#send-button').disabled = true;
   $('#message-input').value = '';
