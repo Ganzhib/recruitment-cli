@@ -1,0 +1,60 @@
+{
+  "name": "@ganzhibin/recruitment-cli",
+  "version": "0.1.0",
+  "description": "AI-native recruitment workflows for job seekers, recruiters and company career sites",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "bin": {
+    "recruit": "dist/recruit.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "docs",
+    "examples",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ganzhib/recruitment-cli.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "tsx --test test/*.test.ts",
+    "test:browser": "tsx --test test/browser/*.test.ts",
+    "smoke": "npm run build && node scripts/smoke.mjs",
+    "check:package": "npm run build && node scripts/check-package.mjs",
+    "dev": "tsx src/recruit.ts",
+    "prepack": "npm run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "playwright": "^1.56.0",
+    "proper-lockfile": "^4.1.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "prettier": "^3.10.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

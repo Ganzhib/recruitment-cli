@@ -1,0 +1,23 @@
+// Keep the site's DOM contract inside the adapter; generic services never know these selectors.
+export const bossSelectors = {
+  jobCards: '.job-card-wrapper',
+  jobLink: 'a.job-card-left, a.job-card-body, a[href*="/job_detail/"]',
+  jobTitle: '.job-name',
+  company: '.company-name',
+  location: '.job-area',
+  salary: '.salary',
+  jobDescription: '.job-sec-text',
+  bossActivity: '.boss-online-tag, .boss-active-time',
+  seekerContact: '.btn-startchat',
+  recommendFrame: 'iframe[name="recommendFrame"]',
+  candidateCards: '.candidate-card-wrap, .card-list .card-item, .geek-list .geek-card',
+  candidateId: '.card-inner',
+  candidateName: '.name-wrap .name, .name',
+  candidateTitle: '.expect-wrap .content, .expect-wrap .join-text-wrap',
+  candidateActivity: '.active-desc, .active-time-desc, .active-status',
+  candidateOnline: '.online-marker, .online-label',
+  recruiterContact: '.button-chat-wrap .btn.btn-greet',
+  jobDropdown: '.job-selecter-wrap .ui-dropmenu-label',
+  jobOptions: '.job-selecter-options .job-list .job-item',
+  resumeFrame: 'iframe[name="c-resume"], iframe[src*="/web/geek/resume"]',
+} as const;
