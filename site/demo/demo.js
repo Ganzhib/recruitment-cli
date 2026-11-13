@@ -9,7 +9,6 @@ const state = {
   role: 'seeker',
   conversationId: undefined,
   busy: false,
-  tools: new Map(),
   inlineTools: new Map(),
   executionGroup: undefined,
 };
@@ -45,12 +44,6 @@ function status(phase, label) {
   $('#agent-status-label').textContent = label;
   statusOrb.set(modes[phase] ?? 'working', label, !['idle', 'done', 'error'].includes(phase));
 }
-$('#activity-toggle').addEventListener('click', () => {
-  const open = $('#activity-panel').hidden;
-  $('#activity-panel').hidden = !open;
-  document.body.classList.toggle('activity-open', open);
-  $('#activity-toggle').setAttribute('aria-expanded', String(open));
-});
 window.addEventListener('pagehide', () => {
   statusOrb.destroy();
   welcomeOrb.destroy();
@@ -60,6 +53,17 @@ function element(tag, className, text) {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+function disclosureIcon() {
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.classList.add('tool-inline-chevron');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('focusable', 'false');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'm9 6 6 6-6 6');
+  icon.append(path);
+  return icon;
 }
 function scrollChat() {
   $('#chat-scroll').scrollTop = $('#chat-scroll').scrollHeight;
@@ -156,22 +160,7 @@ function results(container, targets) {
   scrollChat();
 }
 function tool(event) {
-  $('#activity-empty').hidden = true;
   if (event.type === 'tool.start') {
-    const card = element('article', 'tool-card');
-    const heading = element('div', 'tool-heading');
-    heading.append(
-      element('span', '', names[event.name] || event.name),
-      element('span', 'tool-state', '执行中'),
-    );
-    card.append(heading, element('div', 'tool-command', '$ ' + event.command));
-    const details = element('details');
-    details.append(
-      element('summary', '', '查看参数'),
-      element('pre', '', JSON.stringify(event.input, null, 2)),
-    );
-    card.append(details);
-    state.tools.set(event.id, card);
     const inline = element('details', 'tool-inline');
     inline.dataset.state = 'running';
     const summary = element('summary');
@@ -180,7 +169,7 @@ function tool(event) {
     summary.append(
       icon,
       element('span', 'tool-inline-label', '正在' + (names[event.name] || '执行操作')),
-      element('span', 'tool-inline-chevron', '⌄'),
+      disclosureIcon(),
     );
     const detail = element('div', 'tool-inline-detail');
     detail.append(
@@ -198,7 +187,7 @@ function tool(event) {
         groupIcon,
         element('span', 'execution-label'),
         element('span', 'execution-count'),
-        element('span', 'tool-inline-chevron', '⌄'),
+        disclosureIcon(),
       );
       group.append(heading, element('div', 'execution-steps'));
       $('#messages').append(group);
@@ -207,9 +196,6 @@ function tool(event) {
     state.executionGroup.querySelector('.execution-steps').append(inline);
     updateExecutionGroup(inline);
     scrollChat();
-    $('#activity-list').append(card);
-    $('#activity-count').textContent = String(state.tools.size);
-    $('#activity-total').textContent = String(state.tools.size);
     status(
       event.name.includes('search')
         ? 'searching'
@@ -219,17 +205,6 @@ function tool(event) {
       names[event.name] || '正在执行',
     );
   } else {
-    const card = state.tools.get(event.id);
-    if (!card) return;
-    card.querySelector('.tool-state').textContent =
-      event.type === 'tool.error' ? '需处理' : `完成 · ${event.durationMs ?? 0}ms`;
-    if (event.type === 'tool.error') card.classList.add('failed');
-    const details = element('details');
-    details.append(
-      element('summary', '', event.type === 'tool.error' ? '查看问题' : '查看回执'),
-      element('pre', '', JSON.stringify(event.result ?? event.error, null, 2)),
-    );
-    card.append(details);
     const inline = state.inlineTools.get(event.id);
     if (inline) {
       const failed = event.type === 'tool.error';
@@ -260,7 +235,6 @@ function tool(event) {
       results(output, targets);
     }
   }
-  $('#activity-list').scrollTop = $('#activity-list').scrollHeight;
 }
 function updateExecutionGroup(inline) {
   const group = inline.closest('.execution-group');
@@ -277,15 +251,10 @@ function updateExecutionGroup(inline) {
 function reset() {
   if (state.busy) return;
   state.conversationId = undefined;
-  state.tools.clear();
   state.inlineTools.clear();
   state.executionGroup = undefined;
   $('#messages').replaceChildren();
-  $('#activity-list').replaceChildren();
-  $('#activity-count').textContent = '0';
-  $('#activity-total').textContent = '0';
   status('idle', '就绪');
-  $('#activity-empty').hidden = false;
   $('#welcome').hidden = false;
 }
 function role(role) {

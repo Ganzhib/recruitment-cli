@@ -55,14 +55,6 @@
             <h1>招聘助手</h1>
           </div>
           <div class="header-actions">
-            <button
-              class="outline-button"
-              id="activity-toggle"
-              aria-expanded="false"
-              aria-controls="activity-panel"
-            >
-              执行过程 <span id="activity-total">0</span>
-            </button>
             <span class="mode-badge" id="mode-badge">交互演示 · 虚构数据</span
             ><button class="outline-button" id="settings-open">连接 Agent <span>↗</span></button>
           </div>
@@ -133,25 +125,6 @@
           </p>
         </div>
       </main>
-      <aside class="activity-panel" id="activity-panel" hidden>
-        <header>
-          <div>
-            <span class="eyebrow">ACTION, IN VIEW</span>
-            <h2>执行过程</h2>
-          </div>
-          <span class="activity-count" id="activity-count">0</span>
-        </header>
-        <div class="activity-empty" id="activity-empty">
-          <span>⌘</span>
-          <h3>从对话到行动</h3>
-          <p>工具调用、筛选参数和执行回执<br />会在这里依次展开。</p>
-          <div class="flow-preview">
-            <span>理解需求</span><i>↓</i><span>筛选与计划</span><i>↓</i><span>开始对话</span>
-          </div>
-        </div>
-        <div id="activity-list" class="activity-list" aria-live="polite"></div>
-        <footer><span class="status-dot"></span> 与 CLI 共用业务能力与执行记录</footer>
-      </aside>
     </div>
     <dialog id="settings-dialog">
       <form id="settings-form">
