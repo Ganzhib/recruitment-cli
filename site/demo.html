@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="在对话中体验 Recruitment CLI，看见从筛选到沟通的每一步。" />
+    <title>demo · Recruitment CLI</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="demo.css" />
+    <script src="demo.js" defer></script>
+  </head>
+  <body>
+    <div class="demo-shell">
+      <aside class="sidebar">
+        <a class="brand" href="index.html"
+          ><span class="brand-mark">r.</span
+          ><span>recruitment<span class="brand-sub">demo / 对话工作台</span></span></a
+        >
+        <button class="new-chat" id="new-chat"><span>＋</span> 新对话</button>
+        <p class="rail-label">从一个场景开始</p>
+        <button class="scenario selected" data-scenario="seeker">
+          <span>↗</span><span>寻找下一份机会<small>求职者工作流</small></span>
+        </button>
+        <button class="scenario" data-scenario="recruiter">
+          <span>⌕</span><span>遇见合适的人<small>招聘者工作流</small></span>
+        </button>
+        <div class="rail-note">
+          <span class="status-dot"></span><strong>让行动有迹可循</strong>
+          <p>每次筛选、每条沟通，都能看到发生了什么。</p>
+        </div>
+        <a
+          class="rail-link"
+          href="https://github.com/Ganzhib/recruitment-cli/blob/main/docs/DEMO.md"
+          target="_blank"
+          rel="noreferrer"
+          >第三方 Agent 接入 <span>↗</span></a
+        >
+        <a class="rail-link" href="index.html">了解 Recruitment CLI <span>↗</span></a>
+        <div class="rail-bottom">
+          <span class="avatar">你</span
+          ><span>你的招聘工作空间<small>账号会话保留在本机</small></span>
+        </div>
+      </aside>
+      <main class="conversation">
+        <header class="chat-header">
+          <div>
+            <span class="eyebrow">YOUR NEXT CONVERSATION</span>
+            <h1>与机会，对上话。</h1>
+          </div>
+          <div class="header-actions">
+            <span class="mode-badge" id="mode-badge">交互演示 · 虚构数据</span
+            ><button class="outline-button" id="settings-open">连接 Agent <span>↗</span></button>
+          </div>
+        </header>
+        <div class="chat-scroll" id="chat-scroll">
+          <section class="welcome" id="welcome">
+            <span class="welcome-icon">r.</span>
+            <p class="eyebrow">LESS REPETITION. MORE CONNECTION.</p>
+            <h2>下一段对话，<br />从这里开始。</h2>
+            <p>说出你期待的机会，或你正在寻找的人。<br />筛选、整理、沟通，让每一步都更清楚。</p>
+            <div class="starter-grid">
+              <button
+                data-role="seeker"
+                data-prompt="帮我看看上海最近活跃的前端岗位，先整理 3 个合适的机会。"
+              >
+                <span>↗</span> 找到值得聊的机会<small>上海 · 前端开发 · 近期活跃</small></button
+              ><button
+                data-role="recruiter"
+                data-prompt="我在招聘前端工程师，帮我整理最近活跃的候选人。"
+              >
+                <span>⌕</span> 遇见匹配的候选人<small>岗位匹配 · 活跃筛选 · 先看计划</small>
+              </button>
+            </div>
+          </section>
+          <div class="messages" id="messages" aria-live="polite"></div>
+        </div>
+        <div class="composer-wrap">
+          <div class="context-bar">
+            <span><span class="status-dot"></span> <b id="context-role">求职者示例</b></span
+            ><label id="permission-label" hidden
+              ><input type="checkbox" id="allow-contact" /> 允许发起沟通</label
+            ><label id="platform-label" hidden
+              >平台
+              <select id="platform">
+                <option value="boss">BOSS 直聘</option>
+              </select></label
+            ><span class="sample-label" id="sample-label">示例不连接真实账号</span>
+          </div>
+          <form id="chat-form" class="composer">
+            <textarea
+              id="message-input"
+              aria-label="输入你的求职或招聘需求"
+              placeholder="描述你正在寻找的机会…"
+              rows="2"
+              maxlength="12000"
+            ></textarea>
+            <div class="composer-footer">
+              <span>Enter 发送 · Shift + Enter 换行</span
+              ><button type="submit" id="send-button" aria-label="发送消息">↑</button>
+            </div>
+          </form>
+          <p class="composer-note" id="composer-note">
+            当前是预设流程演示。连接本地 Demo 后，可由真实 Agent 调用招聘能力。
+          </p>
+        </div>
+      </main>
+      <aside class="activity-panel">
+        <header>
+          <div>
+            <span class="eyebrow">ACTION, IN VIEW</span>
+            <h2>每一步，都看得见。</h2>
+          </div>
+          <span class="activity-count" id="activity-count">0</span>
+        </header>
+        <div class="activity-empty" id="activity-empty">
+          <span>⌘</span>
+          <h3>从对话到行动</h3>
+          <p>工具调用、筛选参数和执行回执<br />会在这里依次展开。</p>
+          <div class="flow-preview">
+            <span>理解需求</span><i>↓</i><span>筛选与计划</span><i>↓</i><span>开始对话</span>
+          </div>
+        </div>
+        <div id="activity-list" class="activity-list" aria-live="polite"></div>
+        <footer><span class="status-dot"></span> 与 CLI 共用业务能力与执行记录</footer>
+      </aside>
+    </div>
+    <dialog id="settings-dialog">
+      <form id="settings-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">BRING YOUR OWN AGENT</p>
+            <h2>连接你的 AI 助手</h2>
+          </div>
+          <button type="button" class="icon-button" id="settings-close" aria-label="关闭设置">
+            ×
+          </button>
+        </div>
+        <p id="settings-intro">
+          连接支持工具调用的兼容模型服务。密钥只保存在本地 Demo 服务的内存中。
+        </p>
+        <div id="remote-notice" hidden>
+          <p>GitHub Pages 展示公开示例。要让 Agent 操作本机 CLI，请在项目中运行：</p>
+          <code>npm ci &amp;&amp; npm run demo</code>
+          <p>然后打开 <a href="http://127.0.0.1:4318/">http://127.0.0.1:4318/</a>。</p>
+        </div>
+        <fieldset id="agent-fields">
+          <label
+            >服务地址<input
+              name="baseUrl"
+              id="agent-base"
+              type="url"
+              placeholder="https://your-model-service.example/v1"
+              required /></label
+          ><label
+            >模型名称<input
+              name="model"
+              id="agent-model"
+              placeholder="填写服务中的模型 ID"
+              required /></label
+          ><label
+            >API Key<input
+              name="apiKey"
+              id="agent-key"
+              type="password"
+              placeholder="本机模型可留空"
+              autocomplete="off"
+          /></label>
+          <p class="field-hint">
+            使用 Chat Completions 工具调用协议，也可以由第三方 Agent 直接调用本地工具 HTTP 接口。
+          </p>
+        </fieldset>
+        <p id="settings-error" class="form-error" role="alert"></p>
+        <div class="dialog-actions">
+          <a
+            href="https://github.com/Ganzhib/recruitment-cli/blob/main/docs/DEMO.md"
+            target="_blank"
+            rel="noreferrer"
+            >接入说明 ↗</a
+          ><button class="primary-button" id="settings-save" type="submit">保存连接</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>

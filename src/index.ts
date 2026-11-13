@@ -45,3 +45,9 @@ export { createCompanySitePlatform } from './platform/company-site/adapter.js';
 export { companySiteSchema, type CompanySiteConfig } from './platform/company-site/config.js';
 export { defaultPlatforms } from './platform/builtins.js';
 export { RecruitmentError, type ErrorCode } from './shared/errors.js';
+export {
+  createRecruitmentTools,
+  type RecruitmentTools,
+  type RecruitmentToolEvent,
+  type ToolPolicy,
+} from './services/agent-tools.js';

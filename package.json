@@ -42,7 +42,8 @@
     "dev": "tsx src/recruit.ts",
     "prepack": "npm run build",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "demo": "tsx demo/demo.ts"
   },
   "dependencies": {
     "commander": "^14.0.0",

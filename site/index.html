@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Recruitment CLI，让求职与招聘从重复操作走向有价值的对话。找到近期活跃的机会与候选人，让你的 AI 助手完成筛选、整理和沟通。"
+    />
+    <meta name="theme-color" content="#080b12" />
+    <meta property="og:title" content="Recruitment CLI · 让合适的机会，更快进入对话" />
+    <meta
+      property="og:description"
+      content="为求职者、招聘者和他们的 AI 助手而生。从找到合适的人，到开始一段对话。"
+    />
+    <title>Recruitment CLI · 让合适的机会，更快进入对话</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="site.js" defer></script>
+  </head>
+  <body class="landing">
+    <a class="skip-link" href="#main">跳转到主要内容</a>
+    <a
+      class="studio-banner"
+      href="https://my.feishu.cn/wiki/Tj4ZwTpEUisrg3kojmbcnR9yn1I?create_from=create_doc_to_wiki"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="淘气工作室：给 AI 找点新本事，打开工具箱"
+    >
+      <span class="banner-mascot" aria-hidden="true">•ᴗ•</span
+      ><span class="banner-copy"
+        ><strong>你的 AI，又在等你派活？</strong><span>淘气工作室 · 给它找点新本事</span></span
+      ><span class="banner-cta">打开工具箱 ↗</span>
+    </a>
+    <header class="site-header">
+      <a class="site-brand" href="./"
+        ><span class="logo">r.</span><span>recruitment<span class="logo-tag">CLI</span></span></a
+      >
+      <nav aria-label="主要导航">
+        <a href="#cli">认识 CLI</a><a href="#possibilities">使用场景</a
+        ><a href="#workflow">如何开始</a><a href="#agents">与你的 Agent 一起工作</a>
+      </nav>
+      <a
+        class="github-link"
+        href="https://github.com/Ganzhib/recruitment-cli"
+        target="_blank"
+        rel="noreferrer"
+        >GitHub <span>↗</span></a
+      >
+    </header>
+    <main id="main">
+      <section class="hero section-wrap">
+        <div class="hero-copy">
+          <div class="release-pill">
+            <span class="status-dot"></span> 开源预览版 <i></i> 为下一段对话而生
+          </div>
+          <p class="section-kicker">LESS REPETITION. MORE CONNECTION.</p>
+          <h1>让合适的机会，<br /><span>更快进入对话。</span></h1>
+          <p class="product-definition">
+            <strong>recruitment-cli · 求职与招聘助手</strong><br />安装到你的电脑，用
+            <code>recruit</code> 命令，让 AI 把下一步接着做完。
+          </p>
+          <p class="hero-description">
+            少一点反复筛选，多一点有价值的沟通。<br />把你想找的机会、正在寻找的人告诉助手，<br />让每一步都更清楚，也更从容。
+          </p>
+          <div class="hero-actions">
+            <a class="button button-dark" href="#install">开始使用 CLI <span>↗</span></a
+            ><a class="text-link" href="demo.html">体验对话 Demo <span>→</span></a>
+          </div>
+          <p class="hero-footnote">为求职者、招聘者，以及他们的 AI 助手而设计。</p>
+        </div>
+        <div class="hero-product" aria-label="连接机会与人才的概念主视觉">
+          <img
+            class="hero-sculpture"
+            src="assets/connection-hero.png"
+            alt="两道精密玻璃曲面在深色空间中相连，折射出冰蓝色光线"
+            fetchpriority="high"
+          />
+          <div class="art-caption">
+            <span>THE NEXT CONNECTION</span><i></i><span>从你的目标，连接到下一步。</span>
+          </div>
+        </div>
+      </section>
+      <div class="principles section-wrap">
+        <p>把时间留给真正重要的事</p>
+        <div>
+          <span>求职 / 招聘双向支持</span><i></i><span>按对方近期活跃筛选</span><i></i
+          ><span>与现有 AI 助手协作</span><i></i><span>操作过程清楚可见</span>
+        </div>
+      </div>
+      <section id="cli" class="cli-section section-wrap">
+        <div class="cli-intro">
+          <p class="section-kicker">MEET RECRUITMENT CLI</p>
+          <h2>给你的 AI，<br />一套招聘行动工具。</h2>
+          <p>
+            <strong>recruitment-cli · 求职与招聘助手。</strong><br />产品名
+            recruitment-cli，安装后使用 <code>recruit</code> 命令。
+          </p>
+          <p>
+            它是在电脑上运行的开源工具。你可以直接在终端里找岗位、筛选候选人、准备沟通计划；也可以把目标告诉能操作本机的
+            AI 助手，让它帮你接着完成。
+          </p>
+          <div class="cli-facts">
+            <span>免费开源</span><span>本机运行</span><span>双向身份</span>
+          </div>
+          <a
+            class="text-link"
+            href="https://github.com/Ganzhib/recruitment-cli#开始使用"
+            target="_blank"
+            rel="noreferrer"
+            >安装与使用说明 <span>↗</span></a
+          >
+        </div>
+        <div class="cli-terminal">
+          <div class="terminal-header"><span>recruit / 命令示例</span><span>CLI</span></div>
+          <pre><span class="terminal-comment"># 扫码登录，自动识别当前身份</span>
+<span class="terminal-prompt">$</span> recruit auth login boss
+
+<span class="terminal-comment"># 先整理最近活跃的匹配结果</span>
+<span class="terminal-prompt">$</span> recruit search "前端" --platform boss
+  --city 上海 --active-within 7d -n 5
+
+<span class="terminal-comment"># 只准备沟通计划，先不发送</span>
+<span class="terminal-prompt">$</span> recruit greet "前端" --platform boss
+  --active-within 7d --dry-run</pre>
+          <p>平台登录、搜索、计划和回执，是同一套连贯的工作流。</p>
+        </div>
+      </section>
+      <section class="getting-started section-wrap" id="install">
+        <div>
+          <p class="section-kicker">GET STARTED WITH YOUR ASSISTANT</p>
+          <h2>复制给 AI，<br />从装好工具开始。</h2>
+          <p>和 wm-cli 一样，先连接你的本机环境，再交给它第一项任务。</p>
+        </div>
+        <div class="setup-prompt">
+          <p id="setup-prompt">
+            请帮我安装并配置 recruitment-cli（求职与招聘助手，命令为 recruit）。先读取 GitHub
+            仓库当前说明，按源码预览版准备 Node.js 22.16+ 与
+            Chrome/Chromium，安装依赖、构建并核对命令。引导我扫码登录，自动识别求职者或招聘者身份，再按我的岗位、城市和近期活跃要求整理结果。这次只安装、登录与读取，先不发招呼。
+          </p>
+          <div>
+            <button id="copy-setup" type="button">复制安装提示词 ↗</button
+            ><a
+              href="https://github.com/Ganzhib/recruitment-cli#开始使用"
+              target="_blank"
+              rel="noreferrer"
+              >自行安装</a
+            >
+          </div>
+          <span id="copy-status" role="status" aria-live="polite"></span>
+        </div>
+      </section>
+      <section class="product-showcase section-wrap">
+        <div class="showcase-heading">
+          <div>
+            <p class="section-kicker">FROM WORDS TO WORK</p>
+            <h2>一句话，让下一步发生。</h2>
+          </div>
+          <a class="text-link" href="demo.html">进入完整 Demo <span>↗</span></a>
+        </div>
+        <div class="showcase-frame">
+          <div class="showcase-bar">
+            <span><i></i><i></i><i></i></span>
+            <p>RECRUITMENT / LIVE DEMO</p>
+            <b>交互示例 · 虚构数据</b>
+          </div>
+          <iframe
+            src="demo.html?embed=1"
+            title="Recruitment 可交互工作台示例"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </section>
+      <section id="possibilities" class="roles-section section-wrap">
+        <div class="section-heading">
+          <p class="section-kicker">TWO SIDES. ONE BETTER EXPERIENCE.</p>
+          <h2>无论你在寻找机会，<br />还是寻找合适的人。</h2>
+          <p>共同的期待，是更快遇见值得聊的对方。</p>
+        </div>
+        <div class="role-switch" role="tablist" aria-label="选择使用场景">
+          <button
+            id="tab-seeker"
+            role="tab"
+            aria-selected="true"
+            aria-controls="role-content"
+            data-role="seeker"
+          >
+            我在寻找机会 <span>↗</span></button
+          ><button
+            id="tab-recruiter"
+            role="tab"
+            aria-selected="false"
+            aria-controls="role-content"
+            data-role="recruiter"
+          >
+            我在寻找人才 <span>⌕</span>
+          </button>
+        </div>
+        <div class="role-content" id="role-content" role="tabpanel" aria-labelledby="tab-seeker">
+          <div class="role-copy">
+            <span class="role-number">01 / FOR JOB SEEKERS</span>
+            <h3 id="role-title">让每次投向未来的目光，<br />更有方向。</h3>
+            <p id="role-description">
+              从你期待的岗位和城市出发，把最近活跃、值得进一步了解的机会整理出来。少一点来回切换，把精力留给了解团队和表达自己。
+            </p>
+            <ul id="role-benefits">
+              <li>围绕你的岗位方向寻找机会</li>
+              <li>优先关注近期活跃的招聘者</li>
+              <li>看过整理结果，再开始沟通</li>
+            </ul>
+            <a class="text-link" id="role-demo" href="demo.html?role=seeker"
+              >体验求职者场景 <span>→</span></a
+            >
+          </div>
+          <div class="role-visual">
+            <div class="visual-label">
+              <span class="status-dot"></span
+              ><span id="visual-label">你的下一步，不必从一片空白开始。</span>
+            </div>
+            <div class="criteria">
+              <span>你的期待</span>
+              <div id="criteria-tags"><b>前端开发</b><b>上海</b><b>近期活跃</b></div>
+            </div>
+            <div class="visual-line"><i></i><span>筛选与整理</span><i></i></div>
+            <div class="match-card">
+              <div>
+                <span class="match-icon">↗</span>
+                <h4 id="match-title">值得进一步了解的机会</h4>
+              </div>
+              <p id="match-description">岗位方向、城市与活跃状态，在开始对话前先看清楚。</p>
+              <div class="match-status">
+                <span>✓ 方向匹配</span><span>✓ 近期活跃</span><span>✓ 待你了解</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="workflow" class="workflow-section">
+        <div class="section-wrap">
+          <div class="workflow-intro">
+            <p class="section-kicker">A CLEARER WAY FORWARD</p>
+            <h2>不用反复点选。<br />从你真正想做的事开始。</h2>
+            <p>一句话描述需求，把重复步骤交给助手，<br />把关键选择留在自己手里。</p>
+          </div>
+          <div class="workflow-steps">
+            <article>
+              <span class="step-number">01</span>
+              <div>
+                <h3>说出你在寻找什么</h3>
+                <p>一个岗位方向、一座城市，或一份招聘需求。让助手先理解你的目标。</p>
+              </div>
+            </article>
+            <article>
+              <span class="step-number">02</span>
+              <div>
+                <h3>看见清楚的匹配结果</h3>
+                <p>把近期活跃的机会或候选人整理成计划。匹配在哪里，下一步是什么，一眼能看懂。</p>
+              </div>
+            </article>
+            <article>
+              <span class="step-number">03</span>
+              <div>
+                <h3>让合适的对话发生</h3>
+                <p>按你的指令，使用平台已有的招呼语发起沟通。已经处理的目标和执行结果都有记录。</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section class="visibility-section section-wrap">
+        <div class="visibility-visual">
+          <div class="receipt-header">
+            <span class="mini-logo">r.</span><span>一次沟通的来路与去向</span
+            ><span class="tiny-pill">流程示意</span>
+          </div>
+          <div class="receipt-row">
+            <span class="check">✓</span>
+            <div><strong>确认当前身份</strong><small>求职者 / 招聘者，登录后自动识别</small></div>
+            <span>已确认</span>
+          </div>
+          <div class="receipt-row">
+            <span class="check">✓</span>
+            <div><strong>整理匹配结果</strong><small>先筛选，再形成清楚的沟通计划</small></div>
+            <span>已准备</span>
+          </div>
+          <div class="receipt-row">
+            <span class="check">✓</span>
+            <div><strong>记录执行结果</strong><small>每一次行动，都有可回看的记录</small></div>
+            <span>可追踪</span>
+          </div>
+          <p class="receipt-foot">从“助手说完成了”，到“我知道发生了什么”。</p>
+        </div>
+        <div class="visibility-copy">
+          <p class="section-kicker">CONFIDENCE IN EVERY STEP</p>
+          <h2>你的助手在行动，<br />你始终看得见。</h2>
+          <p>不需要猜它筛选了什么、联系了谁。<br />对话中的每一步，都能展开查看。</p>
+          <div class="small-benefits">
+            <article>
+              <span>↗</span>
+              <div>
+                <h3>先看计划，再决定</h3>
+                <p>筛选结果与沟通计划清楚呈现。</p>
+              </div>
+            </article>
+            <article>
+              <span>↺</span>
+              <div>
+                <h3>把重复操作留在过去</h3>
+                <p>已处理的目标有记录，重复执行也能识别。</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section id="agents" class="agents-section section-wrap">
+        <div>
+          <p class="section-kicker">WORKS WITH YOUR WAY OF WORKING</p>
+          <h2>你已经有 AI 助手？<br /><span>让它多一项行动能力。</span></h2>
+          <p>
+            把招聘工作接入熟悉的 Agent，或从对话 Demo 开始。<br />不用重建整个工作方式，让现有助手帮你把下一步做好。
+          </p>
+          <a
+            class="button button-light"
+            href="https://github.com/Ganzhib/recruitment-cli/blob/main/docs/DEMO.md"
+            target="_blank"
+            rel="noreferrer"
+            >了解 Agent 接入 <span>↗</span></a
+          >
+        </div>
+        <div class="agent-orbit">
+          <div class="orbit-node top">你的 AI 助手</div>
+          <div class="orbit-connector"></div>
+          <div class="orbit-core">
+            <span>r.</span>
+            <div>recruitment<small>把目标变成行动</small></div>
+          </div>
+          <div class="orbit-split"><i></i><i></i></div>
+          <div class="orbit-targets">
+            <span>求职与招聘平台<small>首站：BOSS 直聘</small></span
+            ><span>公司招聘官网<small>公开职位发现</small></span>
+          </div>
+        </div>
+      </section>
+      <section class="start-section section-wrap">
+        <p class="section-kicker">START WITH ONE CONVERSATION</p>
+        <h2>值得投入的，<br />是接下来的那段对话。</h2>
+        <p>现在，先体验一个清楚的下一步。</p>
+        <div class="hero-actions">
+          <a class="button button-dark" href="demo.html">打开对话 Demo <span>↗</span></a
+          ><a
+            class="text-link"
+            href="https://github.com/Ganzhib/recruitment-cli"
+            target="_blank"
+            rel="noreferrer"
+            >查看开源项目 <span>→</span></a
+          >
+        </div>
+        <p class="availability">
+          当前为开源预览版。已提供 BOSS 直聘适配与可配置官网职位读取；<br />在线 Demo
+          使用虚构示例，真实账号与模型服务在本地连接。
+        </p>
+      </section>
+    </main>
+    <footer class="site-footer section-wrap">
+      <a class="site-brand" href="./"
+        ><span class="logo">r.</span><span>recruitment<span class="logo-tag">CLI</span></span></a
+      ><span>少一点重复，多一点连接。</span>
+      <div>
+        <a
+          href="https://github.com/Ganzhib/recruitment-cli/blob/main/README.md"
+          target="_blank"
+          rel="noreferrer"
+          >使用文档 ↗</a
+        ><a href="https://github.com/Ganzhib/recruitment-cli" target="_blank" rel="noreferrer"
+          >GitHub ↗</a
+        >
+      </div>
+    </footer>
+  </body>
+</html>
