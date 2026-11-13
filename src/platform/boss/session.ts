@@ -1,0 +1,96 @@
+import type { Page } from 'playwright';
+import { z } from 'zod';
+import type { AccountProfile, Role } from '../../core/schemas.js';
+import { RecruitmentError } from '../../shared/errors.js';
+import { navigate } from '../../runtime/browser.js';
+
+export const BOSS_ORIGIN = 'https://www.zhipin.com';
+export const BOSS_LOGIN = BOSS_ORIGIN + '/web/user/?ka=header-login';
+export interface BossSession {
+  profile: AccountProfile;
+  page: Page;
+}
+export const candidateContextSchema = z.object({
+  jobId: z.string().min(1),
+  jobName: z.string().min(1),
+  candidateId: z.string().min(1),
+});
+export type CandidateContext = z.infer<typeof candidateContextSchema>;
+export const bossOptionsSchema = z.strictObject({ job: z.string().min(1).optional() });
+interface BossEnvelope<T> {
+  code: number;
+  message: string;
+  zpData: T | null;
+}
+export function roleFromUrl(value: string): Role | undefined {
+  const url = new URL(value);
+  if (url.origin !== BOSS_ORIGIN) return undefined;
+  if (/^\/web\/geek(?:\/|$)/.test(url.pathname)) return 'seeker';
+  if (/^\/web\/chat(?:\/|$)/.test(url.pathname)) return 'recruiter';
+  return undefined;
+}
+export function assertBossUrl(value: string): string {
+  const url = new URL(value);
+  if (url.origin !== BOSS_ORIGIN) throw new RecruitmentError('INPUT', '目标不属于 BOSS 直聘。');
+  return url.href;
+}
+export async function bossGet<T>(page: Page, path: string): Promise<T> {
+  const response = (await page.evaluate(async (path) => {
+    const result = await fetch(path, {
+      credentials: 'include',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!result.ok) return { httpError: result.status, envelope: null };
+    if (!result.headers.get('content-type')?.includes('json'))
+      return { httpError: 0, envelope: null };
+    return { httpError: 0, envelope: await result.json() };
+  }, path)) as { httpError: number; envelope: BossEnvelope<T> | null };
+  if (response.httpError || !response.envelope)
+    throw new RecruitmentError('NETWORK', '平台未返回可用的 JSON 响应。');
+  const envelope = response.envelope;
+  if (envelope.code !== 0)
+    throw new RecruitmentError(
+      envelope.code === 37 ? 'AUTH' : 'PLATFORM',
+      'BOSS 请求失败：' + envelope.message,
+      { platformCode: envelope.code },
+    );
+  if (envelope.zpData === null) throw new RecruitmentError('PLATFORM', 'BOSS 成功响应缺少数据。');
+  return envelope.zpData;
+}
+export async function identify(page: Page): Promise<AccountProfile> {
+  const role = roleFromUrl(page.url());
+  if (!role)
+    throw new RecruitmentError('AUTH', '请完成扫码登录，并进入求职端或招聘端主页以识别当前身份。');
+  const user = await bossGet<{ userId: number | string; name: string }>(
+    page,
+    '/wapi/zpuser/wap/getUserInfo.json',
+  );
+  if (!user.userId) throw new RecruitmentError('AUTH', '未取得登录用户 ID。');
+  return { id: String(user.userId), name: user.name, role };
+}
+export async function assertCurrentAccount(session: BossSession): Promise<void> {
+  assertBossUrl(session.page.url());
+  const currentRole = roleFromUrl(session.page.url());
+  if (currentRole && currentRole !== session.profile.role)
+    throw new RecruitmentError('AUTH', '当前浏览器身份已切换，操作已停止。');
+  const user = await bossGet<{ userId: number | string }>(
+    session.page,
+    '/wapi/zpuser/wap/getUserInfo.json',
+  );
+  if (String(user.userId) !== session.profile.id)
+    throw new RecruitmentError('AUTH', '当前浏览器账号已切换，操作已停止。');
+}
+export async function openHome(page: Page, role: Role): Promise<void> {
+  await navigate(page, BOSS_ORIGIN + (role === 'seeker' ? '/web/geek/job' : '/web/chat/index'));
+}
+export async function listPositions(session: BossSession) {
+  const result = await bossGet<
+    { encryptJobId: string; jobName: string; address?: string; salaryDesc?: string }[]
+  >(session.page, '/wapi/zpjob/job/chatted/jobList');
+  return result.map((job) => ({
+    id: job.encryptJobId,
+    title: job.jobName,
+    location: job.address ?? '',
+    salary: job.salaryDesc ?? '',
+  }));
+}

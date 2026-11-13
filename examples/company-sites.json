@@ -1,0 +1,17 @@
+[
+  {
+    "id": "example-careers",
+    "name": "示例公司（请替换为实际站点）",
+    "listingUrl": "https://careers.example/jobs",
+    "queryParameter": "query",
+    "pageParameter": "page",
+    "selectors": {
+      "card": ".job-card",
+      "title": ".job-title",
+      "link": "a.job-link",
+      "location": ".job-location",
+      "description": ".job-description",
+      "next": "a.next:not([aria-disabled='true'])"
+    }
+  }
+]
