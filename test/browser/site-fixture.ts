@@ -31,6 +31,7 @@ export function demoFixture(
   options: {
     configured?: boolean;
     events?: Record<string, unknown>[];
+    history?: { id: string; title: string; events: Record<string, unknown>[] };
   } = {},
 ) {
   const requests: { message: string; allowContact: boolean }[] = [];
@@ -40,6 +41,22 @@ export function demoFixture(
     if (url.pathname === '/api/config')
       return route.fulfill({
         json: { configured: options.configured ?? false, model: 'fixture-model' },
+      });
+    if (url.pathname === '/api/ui')
+      return route.fulfill({
+        json: { conversationId: options.history?.id ?? null, role: 'seeker', platform: 'boss' },
+      });
+    if (url.pathname === '/api/conversations')
+      return route.fulfill({
+        json: {
+          conversations: options.history
+            ? [{ id: options.history.id, title: options.history.title, interrupted: true }]
+            : [],
+        },
+      });
+    if (url.pathname.startsWith('/api/conversations/'))
+      return route.fulfill({
+        json: { id: options.history?.id, events: options.history?.events ?? [], running: false },
       });
     if (url.pathname === '/api/chat') {
       requests.push(route.request().postDataJSON());

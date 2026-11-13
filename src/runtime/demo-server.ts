@@ -7,7 +7,14 @@ import { z } from 'zod';
 import { createRecruitmentTools } from '../services/agent-tools.js';
 import { RecruitmentError } from '../shared/errors.js';
 import type { RecruitmentClient } from '../services/client.js';
-import { runDemoAgent, type AgentConfig, type AgentMessage } from '../services/demo-agent.js';
+import { runDemoAgent, type AgentConfig } from '../services/demo-agent.js';
+import {
+  agentConfigSchema,
+  conversationMessages,
+  DemoStore,
+  demoUiSchema,
+  savedAgentMessage,
+} from './demo-store.js';
 
 const contentTypes: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -16,21 +23,6 @@ const contentTypes: Record<string, string> = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
 };
-const configSchema = z.object({
-  baseUrl: z.url().refine((value) => {
-    const url = new URL(value);
-    return (
-      !url.username &&
-      !url.password &&
-      !url.search &&
-      !url.hash &&
-      (url.protocol === 'https:' ||
-        (url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname)))
-    );
-  }, '远程模型使用 HTTPS，本机模型可使用 HTTP'),
-  model: z.string().trim().min(1),
-  apiKey: z.string().default(''),
-});
 const chatSchema = z.object({
   conversationId: z.uuid().optional(),
   message: z.string().trim().min(1).max(12000),
@@ -66,15 +58,16 @@ export function createDemoServer(options: {
 }) {
   const client = options.client;
   const root = resolve(options.root ?? fileURLToPath(new URL('../site/', import.meta.url)));
-  let config = options.config;
+  const store = new DemoStore(client.home);
+  let config = options.config && agentConfigSchema.parse(options.config);
   if (!config && process.env.RECRUIT_AGENT_BASE_URL && process.env.RECRUIT_AGENT_MODEL) {
-    config = configSchema.parse({
+    config = agentConfigSchema.parse({
       baseUrl: process.env.RECRUIT_AGENT_BASE_URL,
       model: process.env.RECRUIT_AGENT_MODEL,
       apiKey: process.env.RECRUIT_AGENT_API_KEY,
     });
   }
-  const conversations = new Map<string, AgentMessage[]>();
+  let initialized: Promise<void> | undefined;
   const running = new Set<string>();
   return createServer(async (request, response) => {
     const expectedOrigin = `http://127.0.0.1:${request.socket.localPort}`;
@@ -88,18 +81,59 @@ export function createDemoServer(options: {
     }
     const path = new URL(request.url!, expectedOrigin).pathname;
     try {
+      await (initialized ??= (async () => {
+        config ??= await store.loadConfig();
+      })());
       if (request.method === 'GET' && path === '/api/config') {
         json(response, 200, {
           configured: Boolean(config),
           model: config?.model ?? '',
           baseUrl: config?.baseUrl ?? '',
+          hasApiKey: Boolean(config?.apiKey),
           toolsEndpoint: expectedOrigin + '/api/tools',
         });
         return;
       }
       if (request.method === 'POST' && path === '/api/config') {
-        config = configSchema.parse(await body(request));
+        const input = agentConfigSchema
+          .extend({ clearApiKey: z.boolean().default(false) })
+          .parse(await body(request));
+        const next = {
+          baseUrl: input.baseUrl,
+          model: input.model,
+          apiKey: input.clearApiKey
+            ? ''
+            : input.apiKey || (input.baseUrl === config?.baseUrl ? config.apiKey : ''),
+        };
+        await store.saveConfig(next);
+        config = next;
         json(response, 200, { configured: true, model: config.model });
+        return;
+      }
+      if (request.method === 'GET' && path === '/api/conversations') {
+        json(response, 200, {
+          conversations: (await store.list()).map((item) => ({
+            ...item,
+            running: running.has(item.id),
+          })),
+        });
+        return;
+      }
+      if (request.method === 'GET' && path.startsWith('/api/conversations/')) {
+        const id = z.uuid().parse(path.slice('/api/conversations/'.length));
+        const { events } = await store.read(id);
+        json(response, 200, { id, events, running: running.has(id) });
+        return;
+      }
+      if (path === '/api/ui' && request.method === 'GET') {
+        json(response, 200, await store.loadUi());
+        return;
+      }
+      if (path === '/api/ui' && request.method === 'POST') {
+        const input = demoUiSchema.parse(await body(request));
+        if (input.conversationId) await store.read(input.conversationId);
+        await store.saveUi(input);
+        json(response, 200, { ok: true });
         return;
       }
       if (request.method === 'GET' && path === '/api/tools') {
@@ -117,53 +151,79 @@ export function createDemoServer(options: {
       }
       if (request.method === 'POST' && path === '/api/chat') {
         if (!config) throw new RecruitmentError('INPUT', '请先连接模型服务。');
+        const turnConfig = config;
         const input = chatSchema.parse(await body(request));
         const id = input.conversationId ?? randomUUID();
         if (running.has(id)) throw new RecruitmentError('BUSY', '本轮对话仍在执行。');
-        if (input.conversationId && !conversations.has(id))
-          throw new RecruitmentError('NOT_FOUND', '对话已失效，请开始新对话。');
-        const messages = conversations.get(id) ?? [
-          {
-            role: 'system' as const,
-            content:
-              '你是 recruitment-cli 的招聘工作助手。回答使用简短中文和 Markdown，先给结论，再给关键结果或下一步；避免重复免责声明、权限说明、工具名和冗长的操作复述，技术参数在执行过程面板里查看。使用提供的工具发现能力、确认账号、搜索与准备联系计划。平台由当前用户指定。筛选只依据岗位相关要求，不依据年龄、性别等个人特征。先搜索并生成计划；用户已明确要求自动打招呼且本轮 allowContact 为 true 时，展示计划后在同一轮执行并核对回执，不必再次询问；否则只准备计划。未开启 allowContact 时不能发起沟通。工具失败或结果不明时如实说明，不声称已完成未执行的动作。招聘端先列出岗位再选择 options.job。示例说明与真实操作结果必须区分。不要让用户提供 Cookie。',
-          },
-        ];
-        messages.push({
-          role: 'user',
-          content: `当前平台：${input.platform}。本轮发起沟通权限：${input.allowContact}。\n${input.message}`,
-        });
-        conversations.set(id, messages);
         running.add(id);
-        response.writeHead(200, {
-          'Content-Type': 'text/event-stream; charset=utf-8',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-          'X-Accel-Buffering': 'no',
-        });
-        const emit = (event: unknown) => {
-          if (!response.destroyed) response.write('data: ' + JSON.stringify(event) + '\n\n');
-        };
-        emit({ type: 'session', conversationId: id });
-        const abort = new AbortController();
-        response.on('close', () => abort.abort());
         try {
-          await runDemoAgent({
-            config,
-            messages,
-            tools: createRecruitmentTools(client, emit),
-            policy: { allowContact: input.allowContact },
-            signal: abort.signal,
-            onMessage: (content) => emit({ type: 'message', content }),
-            onDelta: (id, delta) => emit({ type: 'message.delta', id, delta }),
-            onStatus: (phase) => emit({ type: 'status', phase }),
+          await store.use(id, Boolean(input.conversationId), async (events, append) => {
+            const previous = events.at(-1);
+            if (previous && !['turn.completed', 'turn.interrupted'].includes(previous.payload.type))
+              await append(previous.turnId, {
+                type: 'turn.interrupted',
+                reason: '上次执行中断，未自动重跑。',
+              });
+            const turnId = randomUUID();
+            await append(turnId, {
+              type: 'turn.started',
+              message: input.message,
+              platform: input.platform,
+              allowContact: input.allowContact,
+            });
+            const messages = [
+              {
+                role: 'system' as const,
+                content:
+                  '你是 recruitment-cli 的招聘工作助手。回答使用简短中文和 Markdown，先给结论，再给关键结果或下一步；避免重复免责声明、权限说明、工具名和冗长的操作复述，技术参数在执行过程面板里查看。使用提供的工具发现能力、确认账号、搜索与准备联系计划。平台由当前用户指定。筛选只依据岗位相关要求，不依据年龄、性别等个人特征。先搜索并生成计划；用户已明确要求自动打招呼且本轮 allowContact 为 true 时，展示计划后在同一轮执行并核对回执，不必再次询问；否则只准备计划。未开启 allowContact 时不能发起沟通。工具失败或结果不明时如实说明，不声称已完成未执行的动作。招聘端先列出岗位再选择 options.job。示例说明与真实操作结果必须区分。不要让用户提供 Cookie。',
+              },
+              ...conversationMessages(events),
+            ];
+            response.writeHead(200, {
+              'Content-Type': 'text/event-stream; charset=utf-8',
+              'Cache-Control': 'no-cache',
+              Connection: 'keep-alive',
+              'X-Accel-Buffering': 'no',
+            });
+            const emit = (event: unknown) => {
+              if (!response.destroyed) response.write('data: ' + JSON.stringify(event) + '\n\n');
+            };
+            emit({ type: 'session', conversationId: id });
+            const abort = new AbortController();
+            response.on('close', () => abort.abort());
+            try {
+              await runDemoAgent({
+                config: turnConfig,
+                messages,
+                tools: createRecruitmentTools(client, async (event) => {
+                  try {
+                    await append(turnId, { type: 'tool', event });
+                  } catch (error) {
+                    abort.abort(error);
+                    throw error;
+                  }
+                  emit(event);
+                }),
+                policy: { allowContact: input.allowContact },
+                signal: abort.signal,
+                onRecord: (message) =>
+                  append(turnId, { type: 'message', message: savedAgentMessage(message) }),
+                onMessage: (content) => emit({ type: 'message', content }),
+                onDelta: (id, delta) => emit({ type: 'message.delta', id, delta }),
+                onStatus: (phase) => emit({ type: 'status', phase }),
+              });
+              abort.signal.throwIfAborted();
+              await append(turnId, { type: 'turn.completed' });
+              emit({ type: 'done' });
+            } catch (error) {
+              const reason = error instanceof Error ? error.message : String(error);
+              await append(turnId, { type: 'turn.interrupted', reason });
+              emit({ type: 'error', message: reason });
+            }
           });
-          emit({ type: 'done' });
-        } catch (error) {
-          emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
         } finally {
           running.delete(id);
-          response.end();
+          if (response.headersSent) response.end();
         }
         return;
       }
@@ -195,6 +255,10 @@ export function createDemoServer(options: {
       });
       response.end(content);
     } catch (error) {
+      if (response.headersSent) {
+        if (!response.writableEnded) response.end();
+        return;
+      }
       json(response, 400, {
         error:
           error instanceof z.ZodError

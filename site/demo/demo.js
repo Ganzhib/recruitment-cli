@@ -5,6 +5,7 @@ import { createOrb } from './orb.js';
 const $ = (selector) => document.querySelector(selector);
 const state = {
   local: false,
+  ready: false,
   configured: false,
   role: 'seeker',
   conversationId: undefined,
@@ -260,7 +261,7 @@ function updateExecutionGroup(inline) {
   group.querySelector('.execution-count').textContent =
     `${steps.length} 步` + (failures ? ` · ${failures} 项需处理` : '');
 }
-function reset() {
+function reset(save = true) {
   if (state.busy) return;
   state.conversationId = undefined;
   state.inlineTools.clear();
@@ -268,9 +269,12 @@ function reset() {
   $('#messages').replaceChildren();
   status('idle', '就绪');
   $('#welcome').hidden = false;
+  $('#allow-contact').checked = false;
+  $('#history-select').value = '';
+  if (save) void saveUi().catch(historyError);
 }
-function role(role) {
-  reset();
+function role(role, save = true) {
+  reset(false);
   state.role = role;
   document
     .querySelectorAll('[data-scenario]')
@@ -282,6 +286,7 @@ function role(role) {
       : '招聘者示例';
   $('#message-input').placeholder =
     role === 'seeker' ? '描述你正在寻找的机会…' : '描述你正在寻找的人…';
+  if (save) void saveUi().catch(historyError);
 }
 async function sample(text) {
   message('user', text);
@@ -417,7 +422,10 @@ async function chat(text) {
       buffer = buffer.slice(end + 2);
       if (!frame.startsWith('data: ')) continue;
       const event = JSON.parse(frame.slice(6));
-      if (event.type === 'session') state.conversationId = event.conversationId;
+      if (event.type === 'session') {
+        state.conversationId = event.conversationId;
+        await saveUi();
+      }
       if (event.type === 'status')
         status(event.phase, event.phase === 'composing' ? '正在输出' : '正在思考');
       if (event.type === 'message.delta') {
@@ -447,7 +455,7 @@ async function chat(text) {
   if (!complete) throw new Error('连接已中断，请先核对执行记录。');
 }
 async function submit(text) {
-  if (!text.trim() || state.busy) return;
+  if (!state.ready || !text.trim() || state.busy) return;
   if (state.local && !state.configured) {
     $('#settings-dialog').showModal();
     return;
@@ -470,6 +478,7 @@ async function submit(text) {
     state.busy = false;
     $('#send-button').disabled = false;
     $('#message-input').focus();
+    if (state.local) await refreshHistory().catch(historyError);
   }
 }
 $('#chat-form').addEventListener('submit', (event) => {
@@ -493,7 +502,7 @@ document.querySelectorAll('[data-scenario]').forEach((button) =>
     if (!state.busy) role(button.dataset.scenario);
   }),
 );
-$('#new-chat').addEventListener('click', reset);
+$('#new-chat').addEventListener('click', () => reset());
 $('#settings-open').addEventListener('click', () => $('#settings-dialog').showModal());
 $('#settings-close').addEventListener('click', () => $('#settings-dialog').close());
 $('#settings-form').addEventListener('submit', async (event) => {
@@ -504,14 +513,17 @@ $('#settings-form').addEventListener('submit', async (event) => {
     const response = await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))),
+      body: JSON.stringify({
+        ...Object.fromEntries(new FormData(event.currentTarget)),
+        clearApiKey: $('#clear-key').checked,
+      }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error);
     $('#agent-key').value = '';
+    $('#clear-key').checked = false;
     state.configured = true;
     connected(result.model);
-    reset();
     $('#settings-dialog').close();
   } catch (error) {
     $('#settings-error').textContent = error.message;
@@ -527,6 +539,117 @@ function connected(model) {
   $('#sample-label').hidden = true;
   $('#composer-note').hidden = true;
 }
+function historyError(error) {
+  status('error', '历史记录需要处理');
+  message('error', error.message);
+}
+async function api(path, options) {
+  const response = await fetch(path, options);
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error);
+  return value;
+}
+let uiWrites = Promise.resolve();
+function saveUi() {
+  if (!state.local || !state.ready) return Promise.resolve();
+  const body = JSON.stringify({
+    conversationId: state.conversationId ?? null,
+    role: state.role,
+    platform: $('#platform').value,
+  });
+  uiWrites = uiWrites
+    .catch(() => {})
+    .then(() =>
+      api('/api/ui', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      }),
+    );
+  return uiWrites;
+}
+async function refreshHistory() {
+  const { conversations } = await api('/api/conversations');
+  const select = $('#history-select');
+  select.replaceChildren(element('option', '', '＋ 新建会话'));
+  select.firstChild.value = '';
+  for (const item of conversations) {
+    const option = element(
+      'option',
+      '',
+      item.title + (item.running ? ' · 执行中' : item.interrupted ? ' · 已中断' : ''),
+    );
+    option.value = item.id;
+    select.append(option);
+  }
+  select.value = state.conversationId ?? '';
+}
+async function loadConversation(id) {
+  if (state.busy) return;
+  state.busy = true;
+  $('#send-button').disabled = true;
+  let conversation;
+  try {
+    conversation = await api('/api/conversations/' + encodeURIComponent(id));
+  } finally {
+    state.busy = false;
+    $('#send-button').disabled = false;
+  }
+  reset(false);
+  state.conversationId = id;
+  let lastTurn;
+  const finishTools = () => {
+    for (const inline of state.inlineTools.values()) {
+      if (inline.dataset.state !== 'running') continue;
+      inline.dataset.state = 'error';
+      inline.querySelector('.tool-inline-label').textContent = '执行中断 · 请核对回执';
+      updateExecutionGroup(inline);
+    }
+  };
+  for (const record of conversation.events) {
+    const event = record.payload;
+    if (event.type === 'turn.started') {
+      if (lastTurn && !['turn.completed', 'turn.interrupted'].includes(lastTurn)) {
+        finishTools();
+        message('error', '上次执行中断，未自动重跑。请先核对操作回执。');
+      }
+      state.executionGroup = undefined;
+      message('user', event.message);
+      $('#platform').value = event.platform;
+    }
+    if (event.type === 'message' && event.message.role === 'assistant' && event.message.content)
+      message('assistant', event.message.content);
+    if (event.type === 'tool') tool(event.event);
+    if (event.type === 'turn.interrupted') {
+      finishTools();
+      message('error', event.reason + ' 未自动重跑，请先核对操作回执。');
+    }
+    lastTurn = event.type;
+  }
+  if (conversation.running) {
+    status('thinking', '此会话仍在执行，可稍后重新打开查看');
+  } else if (lastTurn && lastTurn !== 'turn.completed') {
+    finishTools();
+    if (lastTurn !== 'turn.interrupted')
+      message('error', '上次执行中断，未自动重跑。请先核对操作回执。');
+    status('error', '上次执行中断');
+  } else status('done', '已恢复历史会话');
+  $('#history-select').value = id;
+  await saveUi();
+}
+$('#history-select').addEventListener('change', async (event) => {
+  if (state.busy) {
+    event.currentTarget.value = state.conversationId ?? '';
+    return;
+  }
+  const id = event.currentTarget.value;
+  try {
+    if (id) await loadConversation(id);
+    else reset();
+  } catch (error) {
+    historyError(error);
+  }
+});
 async function initialize() {
   state.local = location.hostname === '127.0.0.1';
   if (!state.local) {
@@ -536,14 +659,17 @@ async function initialize() {
     $('#settings-save').hidden = true;
     $('#settings-intro').textContent =
       '你正在浏览 GitHub Pages 交互演示。示例内容不会连接真实账号。';
+    state.ready = true;
     return;
   }
   try {
-    const response = await fetch('/api/config');
-    const config = await response.json();
+    const config = await api('/api/config');
     state.configured = config.configured;
     $('#agent-base').value = config.baseUrl;
     $('#agent-model').value = config.model;
+    $('#agent-key').placeholder = config.hasApiKey
+      ? '已保存；留空保留同一服务的密钥'
+      : '本机模型可留空';
     if (config.configured) connected(config.model);
     else {
       $('#mode-badge').textContent = '本地工作台 · 待连接模型';
@@ -551,12 +677,26 @@ async function initialize() {
       $('#sample-label').textContent = '等待连接真实模型';
     }
   } catch {
-    $('#composer-note').textContent =
-      '本地服务未连接。当前只能查看示例，请确认使用 recruit demo 启动。';
+    $('#composer-note').textContent = '本地服务未连接。请确认使用 recruit demo 启动。';
+  }
+  try {
+    $('#history-label').hidden = false;
+    const ui = await api('/api/ui');
+    role(ui.role, false);
+    $('#platform').value = ui.platform;
+    await refreshHistory();
+    if (ui.conversationId) await loadConversation(ui.conversationId);
+  } catch (error) {
+    historyError(error);
+  } finally {
+    state.ready = true;
   }
 }
-if (new URLSearchParams(location.search).get('role') === 'recruiter') role('recruiter');
-initialize();
+if (new URLSearchParams(location.search).get('role') === 'recruiter') role('recruiter', false);
+$('#send-button').disabled = true;
+initialize().finally(() => {
+  $('#send-button').disabled = false;
+});
 
 $('#login-account').addEventListener('click', () =>
   submit('请打开 BOSS 扫码登录，读取我的实际账号和当前身份。'),

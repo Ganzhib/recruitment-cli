@@ -1117,3 +1117,44 @@ dialog code {
     transition: none;
   }
 }
+
+#history-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+#history-label[hidden] {
+  display: none;
+}
+#history-select {
+  width: 170px;
+  max-width: 32vw;
+  padding: 7px;
+  border: 1px solid #34383e;
+  border-radius: 7px;
+  background: #16191d;
+  color: #e5e7eb;
+}
+#agent-fields .clear-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#clear-key {
+  width: auto;
+}
+@media (max-width: 700px) {
+  .quiet-demo .chat-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .quiet-demo .header-actions {
+    flex-wrap: wrap;
+  }
+  #history-select {
+    width: 130px;
+    max-width: 38vw;
+  }
+}

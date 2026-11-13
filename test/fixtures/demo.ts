@@ -7,6 +7,7 @@ import type { AgentMessage } from '../../src/services/demo-agent.js';
 
 export async function serve(t: TestContext, server: Server): Promise<string> {
   t.after(async () => {
+    if (!server.listening) return;
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
       server.closeAllConnections();

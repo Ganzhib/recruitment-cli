@@ -20,6 +20,7 @@ export async function runDemoAgent(options: {
   tools: RecruitmentTools;
   policy: ToolPolicy;
   signal: AbortSignal;
+  onRecord?(message: AgentMessage): Promise<void>;
   onMessage(content: string): void;
   onDelta?(id: string, delta: string): void;
   onStatus?(phase: 'thinking' | 'composing'): void;
@@ -66,6 +67,7 @@ export async function runDemoAgent(options: {
         options.onMessage(reply.content);
       }
     }
+    await options.onRecord?.(reply);
     messages.push(reply);
     if (!reply.tool_calls?.length) return;
     for (const call of reply.tool_calls) {
@@ -78,6 +80,7 @@ export async function runDemoAgent(options: {
           options.policy,
         );
       } catch (error) {
+        signal.throwIfAborted();
         result = {
           ok: false,
           error: error instanceof Error ? error.message : String(error),
@@ -86,7 +89,13 @@ export async function runDemoAgent(options: {
             : {}),
         };
       }
-      messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
+      const message: AgentMessage = {
+        role: 'tool',
+        tool_call_id: call.id,
+        content: JSON.stringify(result),
+      };
+      await options.onRecord?.(message);
+      messages.push(message);
     }
   }
   throw new RecruitmentError('PLATFORM', '本轮已达到 8 次模型调用，请继续对话来完成下一步。');

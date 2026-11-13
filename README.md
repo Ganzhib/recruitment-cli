@@ -212,6 +212,6 @@ npm run check:package
 
 浏览器测试会拦截所有请求，只使用虚构账号与页面，不访问真实招聘平台。已实现的功能与隔离测试通过，不等于真实账号验收通过；真实 BOSS 页面、当前接口和预制话术效果仍需登录后验收。验收步骤见 [docs/LIVE_ACCEPTANCE.md](docs/LIVE_ACCEPTANCE.md)。
 
-默认数据目录为 `~/.config/recruitment-cli`，可通过 `--home`、`RECRUIT_HOME` 或 client 的 `home` 指定。`RECRUIT_BROWSER_PATH` 可指定 Chrome/Chromium 可执行文件。
+默认数据目录为 `~/.config/recruitment-cli`，可通过 `--home`、`RECRUIT_HOME` 或 client 的 `home` 指定。`RECRUIT_BROWSER_PATH` 可指定 Chrome/Chromium 可执行文件。 本地 Demo 的模型配置、密钥和历史会话也使用此目录：配置为 JSON，会话为 JSONL。刷新或重启后可恢复历史，中断的操作不会自动重跑。详见 [Demo 持久化说明](docs/DEMO.md#连接模型)。
 
 参考项目及许可说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

@@ -16,8 +16,8 @@
           ><span class="brand-mark">r.</span
           ><span>recruitment<span class="brand-sub">demo / 对话工作台</span></span></a
         >
-        <button class="new-chat" id="new-chat" aria-label="新对话" title="新对话">
-          <span>＋</span> 新对话
+        <button class="new-chat" id="new-chat" aria-label="新建会话" title="新建会话">
+          <span>＋</span> 新建会话
         </button>
         <p class="rail-label">从一个场景开始</p>
         <button
@@ -55,6 +55,12 @@
             <h1>招聘助手</h1>
           </div>
           <div class="header-actions">
+            <label id="history-label" hidden
+              >历史会话
+              <select id="history-select" aria-label="历史会话">
+                <option value="">＋ 新建会话</option>
+              </select>
+            </label>
             <span class="mode-badge" id="mode-badge">交互演示 · 虚构数据</span
             ><button class="outline-button" id="settings-open">连接 Agent <span>↗</span></button>
           </div>
@@ -95,7 +101,7 @@
           <div class="context-bar">
             <span><span class="status-dot"></span> <b id="context-role">求职者示例</b></span
             ><label id="permission-label" hidden
-              ><input type="checkbox" id="allow-contact" checked /> 允许自动打招呼</label
+              ><input type="checkbox" id="allow-contact" /> 允许自动打招呼</label
             ><label id="platform-label" hidden
               >平台
               <select id="platform">
@@ -138,7 +144,7 @@
           </button>
         </div>
         <p id="settings-intro">
-          连接支持工具调用的兼容模型服务。密钥只保存在本地 Demo 服务的内存中。
+          连接支持工具调用的兼容模型服务。配置、密钥和历史会话保存在本机，重启后可继续使用。
         </p>
         <div id="remote-notice" hidden>
           <p>GitHub Pages 展示公开示例。要连接真实 API Key 并自动打招呼，安装 CLI 后运行：</p>
@@ -168,6 +174,9 @@
               placeholder="本机模型可留空"
               autocomplete="off"
           /></label>
+          <label class="clear-key"
+            ><input type="checkbox" id="clear-key" /> 清除已保存的 API Key</label
+          >
           <p class="field-hint">
             使用 Chat Completions 工具调用协议，也可以由第三方 Agent 直接调用本地工具 HTTP 接口。
           </p>

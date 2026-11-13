@@ -129,7 +129,7 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
         document.querySelector('#mode-badge')?.textContent?.includes('fixture-model'),
       );
       assert.equal(await page.locator('#activity-panel, #activity-toggle').count(), 0);
-      assert.equal(await page.locator('#allow-contact').isChecked(), true);
+      assert.equal(await page.locator('#allow-contact').isChecked(), false);
       await page.locator('#allow-contact').uncheck();
       await page.locator('#message-input').fill('查找岗位');
       await page.locator('#send-button').click();
@@ -178,6 +178,68 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
         true,
       );
       if (width === 1280) await screenshot(page, 'demo-markdown');
+    }
+  });
+});
+
+test('local demo restores history after reload without sending requests or restoring contact permission', async () => {
+  const { browser: local, requests } = demoFixture({
+    configured: true,
+    history: {
+      id: 'd8111fb3-c7fe-48db-ab95-e4f01700b6b5',
+      title: '上次的招聘需求',
+      events: [
+        {
+          payload: {
+            type: 'turn.started',
+            message: '上次的招聘需求',
+            platform: 'boss',
+            allowContact: true,
+          },
+        },
+        { payload: { type: 'message', message: { role: 'assistant', content: '**已整理计划**' } } },
+        {
+          payload: {
+            type: 'tool',
+            event: {
+              type: 'tool.start',
+              id: 'pending',
+              name: 'recruit_run_plan',
+              command: 'recruit plan run fixture',
+              input: {},
+            },
+          },
+        },
+      ],
+    },
+  });
+  await local('', async (_context, page) => {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 850 });
+      await page.goto(demoUrl);
+      await page.locator('.message.user').waitFor();
+      await page.waitForFunction(
+        () => document.querySelector('#agent-status-label')?.textContent === '上次执行中断',
+      );
+      assert.equal(await page.locator('.message.user').innerText(), '上次的招聘需求');
+      assert.equal(await page.locator('.markdown strong').innerText(), '已整理计划');
+      assert.match(await page.locator('.message.error').innerText(), /未自动重跑/);
+      assert.equal(await page.locator('.tool-inline').getAttribute('data-state'), 'error');
+      assert.equal(await page.locator('#allow-contact').isChecked(), false);
+      assert.equal(requests.length, 0);
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      );
+      if (width === 1280) await screenshot(page, 'demo-history');
+      await page.reload();
+      await page.locator('.message.user').waitFor();
+      assert.equal(requests.length, 0);
+      await page.locator('#history-select').selectOption('');
+      assert.equal(await page.locator('#messages').innerText(), '');
+      await page.locator('#history-select').selectOption('d8111fb3-c7fe-48db-ab95-e4f01700b6b5');
+      await page.locator('.message.user').waitFor();
+      assert.equal(requests.length, 0);
     }
   });
 });

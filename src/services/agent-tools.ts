@@ -63,7 +63,9 @@ function searchCommand(name: string, input: z.output<typeof searchSchema>): stri
 
 export function createRecruitmentTools(
   client: RecruitmentClient,
-  onEvent: (event: RecruitmentToolEvent) => void = () => {},
+  onEvent:
+    | ((event: RecruitmentToolEvent) => void)
+    | ((event: RecruitmentToolEvent) => Promise<void>) = () => {},
 ) {
   const definitions: ToolDefinition[] = [
     defineTool({
@@ -181,21 +183,13 @@ export function createRecruitmentTools(
       const id = randomUUID();
       const command = tool.command(input);
       const started = Date.now();
-      onEvent({ type: 'tool.start', id, name, command, input });
+      await onEvent({ type: 'tool.start', id, name, command, input });
+      let result: unknown;
       try {
-        const result = await tool.execute(input);
-        onEvent({
-          type: 'tool.result',
-          id,
-          name,
-          command,
-          result,
-          durationMs: Date.now() - started,
-        });
-        return result;
+        result = await tool.execute(input);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        onEvent({
+        await onEvent({
           type: 'tool.error',
           id,
           name,
@@ -208,6 +202,15 @@ export function createRecruitmentTools(
         });
         throw error;
       }
+      await onEvent({
+        type: 'tool.result',
+        id,
+        name,
+        command,
+        result,
+        durationMs: Date.now() - started,
+      });
+      return result;
     },
   };
 }
