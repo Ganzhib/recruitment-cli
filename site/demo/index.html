@@ -103,7 +103,7 @@
           <div class="context-bar">
             <span><span class="status-dot"></span> <b id="context-role">求职者示例</b></span
             ><label id="permission-label" hidden
-              ><input type="checkbox" id="allow-contact" /> 本轮允许打招呼</label
+              ><input type="checkbox" id="allow-contact" checked /> 允许自动打招呼</label
             ><label id="platform-label" hidden
               >平台
               <select id="platform">
@@ -111,15 +111,10 @@
               </select></label
             ><span class="sample-label" id="sample-label">示例不连接真实账号</span>
           </div>
-          <details id="live-actions" hidden>
-            <summary>更多操作</summary>
-            <div class="live-action-menu">
-              <button type="button" class="outline-button" id="login-account">扫码登录 BOSS</button>
-              <button type="button" class="outline-button" id="auto-greet">
-                准备自动打招呼指令
-              </button>
-            </div>
-          </details>
+          <div id="live-actions" class="composer-actions" hidden>
+            <button type="button" class="outline-button" id="login-account">扫码登录 BOSS</button>
+            <button type="button" class="outline-button" id="auto-greet">准备自动打招呼指令</button>
+          </div>
           <form id="chat-form" class="composer">
             <textarea
               id="message-input"

@@ -236,6 +236,8 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
         document.querySelector('#mode-badge')?.textContent?.includes('fixture-model'),
       );
       assert.equal(await page.locator('#activity-panel').isVisible(), false);
+      assert.equal(await page.locator('#allow-contact').isChecked(), true);
+      await page.locator('#allow-contact').uncheck();
       await page.locator('#message-input').fill('查找岗位');
       await page.locator('#send-button').click();
       await page.waitForFunction(
@@ -265,6 +267,12 @@ test('live demo renders safe Markdown, follows stream states and keeps process d
         'noopener noreferrer',
       );
       assert.equal(await page.locator('#status-orb').getAttribute('data-state'), 'breathing');
+      assert.equal(await page.locator('#allow-contact').isChecked(), false);
+      assert.equal(await page.locator('.tool-inline').count(), 1);
+      assert.match(await page.locator('.tool-inline summary').innerText(), /已完成筛选/);
+      await page.locator('.tool-inline summary').click();
+      assert.equal(await page.locator('.tool-inline-detail').isVisible(), true);
+      await page.locator('.tool-inline summary').click();
       assert.equal(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         true,

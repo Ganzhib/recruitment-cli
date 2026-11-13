@@ -10,6 +10,7 @@ const state = {
   conversationId: undefined,
   busy: false,
   tools: new Map(),
+  inlineTools: new Map(),
 };
 const names = {
   recruit_platforms: '发现可用平台',
@@ -170,6 +171,25 @@ function tool(event) {
     );
     card.append(details);
     state.tools.set(event.id, card);
+    const inline = element('details', 'tool-inline');
+    inline.dataset.state = 'running';
+    const summary = element('summary');
+    const icon = element('span', 'tool-inline-icon', '›_');
+    icon.setAttribute('aria-hidden', 'true');
+    summary.append(
+      icon,
+      element('span', 'tool-inline-label', '正在' + (names[event.name] || '执行操作')),
+      element('span', 'tool-inline-chevron', '⌄'),
+    );
+    const detail = element('div', 'tool-inline-detail');
+    detail.append(
+      element('pre', '', '$ ' + event.command),
+      element('pre', '', JSON.stringify(event.input, null, 2)),
+    );
+    inline.append(summary, detail);
+    state.inlineTools.set(event.id, inline);
+    $('#messages').append(inline);
+    scrollChat();
     $('#activity-list').append(card);
     $('#activity-count').textContent = String(state.tools.size);
     $('#activity-total').textContent = String(state.tools.size);
@@ -193,10 +213,33 @@ function tool(event) {
       element('pre', '', JSON.stringify(event.result ?? event.error, null, 2)),
     );
     card.append(details);
+    const inline = state.inlineTools.get(event.id);
+    if (inline) {
+      const failed = event.type === 'tool.error';
+      inline.dataset.state = failed ? 'error' : 'done';
+      const labels = {
+        recruit_platforms: '已读取平台能力',
+        recruit_accounts: '已读取账号',
+        recruit_login: '已完成扫码登录',
+        recruit_status: '已确认当前身份',
+        recruit_positions: '已读取招聘岗位',
+        recruit_search: '已完成筛选',
+        recruit_plan: '已生成沟通计划',
+        recruit_plan_get: '已读取沟通计划',
+        recruit_run_plan: '已执行沟通计划',
+        recruit_history: '已读取沟通回执',
+      };
+      inline.querySelector('.tool-inline-label').textContent = failed
+        ? (names[event.name] || '操作') + ' · 需要处理'
+        : labels[event.name] || '已执行操作';
+      inline
+        .querySelector('.tool-inline-detail')
+        .append(element('pre', '', JSON.stringify(event.result ?? event.error, null, 2)));
+    }
     const targets = event.result?.targets;
     if (targets?.length) {
-      const last = $('#messages').lastElementChild?.lastElementChild;
-      if (last) results(last, targets);
+      const output = message('assistant', '');
+      results(output, targets);
     }
   }
   $('#activity-list').scrollTop = $('#activity-list').scrollHeight;
@@ -204,8 +247,8 @@ function tool(event) {
 function reset() {
   if (state.busy) return;
   state.conversationId = undefined;
-  $('#allow-contact').checked = false;
   state.tools.clear();
+  state.inlineTools.clear();
   $('#messages').replaceChildren();
   $('#activity-list').replaceChildren();
   $('#activity-count').textContent = '0';
@@ -412,7 +455,6 @@ async function submit(text) {
     message('error', error.message);
   } finally {
     state.busy = false;
-    $('#allow-contact').checked = false;
     $('#send-button').disabled = false;
     $('#message-input').focus();
   }

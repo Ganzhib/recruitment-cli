@@ -64,7 +64,7 @@ export function createRecruitProgram(options: ProgramOptions = {}): Command {
   const streams = options.streams ?? process;
   const program = new Command('recruit')
     .description('面向求职者和招聘者的多平台招聘 CLI')
-    .version('0.1.0')
+    .version('0.1.1')
     .option('--json', '输出单个 JSON 文档')
     .option('--home <directory>', '账号、计划和回执目录', recruitmentHome())
     .option('--sites <file>', '公司官网适配配置 JSON 数组')

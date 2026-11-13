@@ -1,6 +1,6 @@
 {
   "name": "@ganzhibin/recruitment-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI-native recruitment workflows for job seekers, recruiters and company career sites",
   "type": "module",
   "license": "MIT",
