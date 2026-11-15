@@ -17,6 +17,7 @@ import { defaultPlatforms, createDemoPlatforms } from '../platform/builtins.js';
 import { companySiteSchema } from '../platform/company-site/config.js';
 import { recruitmentHome } from '../runtime/accounts.js';
 import { browserExecutable } from '../runtime/browser.js';
+import { openBrowser } from '../runtime/open-browser.js';
 import { RecruitmentError } from '../shared/errors.js';
 import { describeCommand } from './commands/schema.js';
 
@@ -96,7 +97,8 @@ export function createRecruitProgram(options: ProgramOptions = {}): Command {
     .command('demo')
     .description('启动 API Key 驱动的本地 AI 招聘工作台')
     .option('--port <number>', '本地端口', process.env.RECRUIT_DEMO_PORT ?? '4318')
-    .action(async (flags: { port: string }) => {
+    .option('--no-open', '启动服务但不自动打开浏览器')
+    .action(async (flags: { port: string; open: boolean }) => {
       const port = z.coerce.number().int().min(1024).max(65535).parse(flags.port);
       let root = fileURLToPath(new URL('../site/', import.meta.url));
       try {
@@ -119,7 +121,12 @@ export function createRecruitProgram(options: ProgramOptions = {}): Command {
       process.once('SIGTERM', stop);
       server.listen(port, '127.0.0.1');
       await once(server, 'listening');
-      emit({ url: `http://127.0.0.1:${port}/demo/` });
+      const url = `http://127.0.0.1:${port}/demo/`;
+      emit({ url });
+      if (flags.open)
+        await openBrowser(url).catch(() => {
+          streams.stderr.write(`无法自动打开浏览器，请手动访问 ${url}\n`);
+        });
     });
   const platform = program.command('platform').description('平台能力发现');
   platform.command('list').action(async () => emit((await client()).registry.describe()));

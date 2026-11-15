@@ -2,7 +2,7 @@
 
 ## 运行
 
-安装 npm 包后，直接运行 `recruit demo`（自定义端口：`recruit demo --port 4319`）。页面、模型工具调用服务和 CLI 一起分发，不依赖源码。也可以在源码目录使用下面的命令。
+安装 npm 包后，直接运行 `recruit demo`，服务就绪后会自动在系统默认浏览器打开工作台。自定义端口使用 `recruit demo --port 4319`；仅启动服务使用 `recruit demo --no-open`。页面、模型工具调用服务和 CLI 一起分发，不依赖源码。也可以在源码目录使用下面的命令。
 
 ```bash
 npm ci
