@@ -3,7 +3,7 @@ import type { SearchInput, SearchPage, Target, TargetDetail } from '../../core/s
 import { RecruitmentError } from '../../shared/errors.js';
 import { navigate } from '../../runtime/browser.js';
 import { bossActivity } from './activity.js';
-import { observeSearchResponse } from './search-response.js';
+import { browserJobSearch } from './search-browser.js';
 import { bossSelectors as selectors } from './selectors.js';
 import {
   BOSS_ORIGIN,
@@ -150,22 +150,11 @@ interface JobCard {
   skills?: string[];
 }
 export async function searchJobs(session: BossSession, input: SearchInput): Promise<SearchPage> {
-  if (input.options.transport === 'browser') {
-    if (input.page !== 1)
-      throw new RecruitmentError(
-        'UNSUPPORTED',
-        '网页搜索模式当前读取第一页，请将 maxPages 设为 1。',
-      );
-    return searchJobsUsing(async <T>(path: string, referer: string): Promise<T> => {
-      const observation = observeSearchResponse<T>(session.page, path);
-      try {
-        const [result] = await Promise.all([observation.result, navigate(session.page, referer)]);
-        return result;
-      } finally {
-        observation.dispose();
-      }
-    }, input);
-  }
+  if (input.options.transport !== 'http')
+    return searchJobsUsing(
+      (path, referer) => browserJobSearch(session.page, path, referer, input.page),
+      input,
+    );
   return searchJobsUsing(async (path, referer) => {
     await navigate(session.page, referer);
     return bossGet(session.page, path);

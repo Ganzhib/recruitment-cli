@@ -3,7 +3,14 @@ import { request, type APIRequestContext, type Route } from 'playwright';
 import type { TestContext } from 'node:test';
 
 export function bossFixture(role: 'seeker' | 'recruiter') {
-  const state = { sends: 0, userId: 'fixture-user', activity: '3日内活跃' };
+  const state = {
+    sends: 0,
+    searchReads: 0,
+    httpSearchReads: 0,
+    searchCode: 0,
+    userId: 'fixture-user',
+    activity: '3日内活跃',
+  };
   const handle = async (route: Route) => {
     const url = new URL(route.request().url());
     const json = (zpData: unknown) => route.fulfill({ json: { code: 0, message: '', zpData } });
@@ -30,7 +37,12 @@ export function bossFixture(role: 'seeker' | 'recruiter') {
           salaryDesc: '20-30K',
         },
       ]);
-    if (url.pathname === '/wapi/zpgeek/search/joblist.json')
+    if (url.pathname === '/wapi/zpgeek/search/joblist.json') {
+      state.searchReads++;
+      if (state.searchCode)
+        return route.fulfill({
+          json: { code: state.searchCode, message: '您的环境存在异常.', zpData: null },
+        });
       return json({
         hasMore: false,
         jobList: [
@@ -46,6 +58,7 @@ export function bossFixture(role: 'seeker' | 'recruiter') {
           },
         ],
       });
+    }
     if (
       url.pathname === '/wapi/zpgeek/friend/add.json' ||
       url.pathname === '/wapi/zpjob/chat/start'
@@ -65,7 +78,12 @@ export function bossFixture(role: 'seeker' | 'recruiter') {
       );
     if (url.pathname === '/web/geek/job' || url.pathname === '/web/chat/index')
       return html(
-        '<script>document.cookie="__zp_stoken__=fabricated-search-session; path=/"</script><main>测试主页</main>',
+        `<script>
+          document.cookie="__zp_stoken__=fabricated-search-session; path=/";
+          if (location.search) fetch('/wapi/zpgeek/search/joblist.json', {
+            method:'POST', body:new URLSearchParams(location.search)
+          });
+        </script><main>测试主页</main>`,
       );
     return route.abort();
   };
@@ -93,7 +111,10 @@ export function bossFixture(role: 'seeker' | 'recruiter') {
               json: async () => data,
             };
           },
-          post: async (url: string) => client.get(url),
+          post: async (url: string) => {
+            state.httpSearchReads++;
+            return client.get(url);
+          },
           storageState: async () => options!.storageState,
           dispose: async () => {},
         };

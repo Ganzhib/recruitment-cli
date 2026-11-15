@@ -31,6 +31,10 @@ for (const role of ['seeker', 'recruiter'] as const) {
       );
       assert.equal(plan.targets.length, 1);
       assert.equal(plan.targets[0].activity.withinMinutes, 4320);
+      if (role === 'seeker') {
+        assert.equal(state.searchReads, 1);
+        assert.equal(state.httpSearchReads, 0);
+      }
       const result = await client.run(plan.id);
       assert.equal(result.status, 'complete');
       assert.equal(result.operations[0].state, 'sent');

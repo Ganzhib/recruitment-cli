@@ -69,7 +69,7 @@ export function createBossPlatform(options: BossPlatformOptions = {}): Platform 
           if (
             session.profile.role === 'seeker' &&
             session.httpDirectory &&
-            input.options.transport !== 'browser'
+            input.options.transport === 'http'
           )
             return searchJobsUsing(
               (path, referer) => bossHttpGet(session.httpDirectory!, path, referer),

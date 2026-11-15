@@ -1,6 +1,8 @@
 // Keep the site's DOM contract inside the adapter; generic services never know these selectors.
 export const bossSelectors = {
   jobCards: '.job-card-wrapper',
+  jobNextPage:
+    '.options-pages a.next, .options-pages a:has(.ui-icon-arrow-right), [aria-label="下一页"]',
   jobLink: 'a.job-card-left, a.job-card-body, a[href*="/job_detail/"]',
   jobTitle: '.job-name',
   company: '.company-name',

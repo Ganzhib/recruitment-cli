@@ -22,3 +22,8 @@ export function isBossVerification(value: string): boolean {
   const url = new URL(value);
   return url.origin === 'https://www.zhipin.com' && /^\/web\/passport\//.test(url.pathname);
 }
+
+export function isBossLogin(value: string): boolean {
+  const url = new URL(value);
+  return url.origin === 'https://www.zhipin.com' && /^\/web\/user(?:\/|$)/.test(url.pathname);
+}

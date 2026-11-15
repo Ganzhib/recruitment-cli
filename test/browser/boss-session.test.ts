@@ -37,6 +37,7 @@ test('BOSS reads use the current session token and never send it to another orig
 
 test('BOSS read failures preserve endpoint and rejection reason without retrying or exposing queries', async () => {
   const scenarios = [
+    { code: 31, message: '请登录', reason: 'login-required' },
     { code: 36, message: '您的账户存在异常行为.', reason: 'account-restricted' },
     { code: 37, message: '您的环境存在异常.', reason: 'environment-rejected' },
     { code: 37, message: '请登录', reason: 'session-rejected' },
@@ -62,6 +63,7 @@ test('BOSS read failures preserve endpoint and rejection reason without retrying
         bossGet(page, '/wapi/zpgeek/search/joblist.json?query=private-query'),
         (error: unknown) => {
           assert.ok(error instanceof RecruitmentError);
+          if ([31, 37, 121, 122].includes(scenario.code)) assert.equal(error.code, 'AUTH');
           assert.deepEqual(error.details, {
             platformCode: scenario.code,
             endpoint: '/wapi/zpgeek/search/joblist.json',

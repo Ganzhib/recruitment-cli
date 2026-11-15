@@ -82,22 +82,25 @@ export async function bossGet<T>(page: Page, path: string): Promise<T> {
 export function bossPayload<T>(envelope: BossEnvelope<T>, endpoint: string): T {
   if (envelope.code !== 0)
     throw new RecruitmentError(
-      envelope.code === 37 ? 'AUTH' : 'PLATFORM',
+      [31, 37, 121, 122].includes(envelope.code) ? 'AUTH' : 'PLATFORM',
       'BOSS 请求失败：' + envelope.message,
       {
         platformCode: envelope.code,
         endpoint,
-        reason: /账户.*异常|账号.*异常/.test(envelope.message)
-          ? 'account-restricted'
-          : /环境.*异常/.test(envelope.message)
-            ? 'environment-rejected'
-            : envelope.code === 37
-              ? 'session-rejected'
-              : [121, 122].includes(envelope.code)
-                ? 'verification-required'
-                : envelope.code === 9
-                  ? 'rate-limited'
-                  : 'platform-error',
+        reason:
+          envelope.code === 31
+            ? 'login-required'
+            : /账户.*异常|账号.*异常/.test(envelope.message)
+              ? 'account-restricted'
+              : /环境.*异常/.test(envelope.message)
+                ? 'environment-rejected'
+                : envelope.code === 37
+                  ? 'session-rejected'
+                  : [121, 122].includes(envelope.code)
+                    ? 'verification-required'
+                    : envelope.code === 9
+                      ? 'rate-limited'
+                      : 'platform-error',
       },
     );
   if (envelope.zpData === null) throw new RecruitmentError('PLATFORM', 'BOSS 成功响应缺少数据。');

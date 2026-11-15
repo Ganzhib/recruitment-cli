@@ -39,7 +39,7 @@ test('browser search reads the normal page POST response without duplicating the
         query: 'TypeScript',
         city: '上海',
         page: 1,
-        options: { transport: 'browser' },
+        options: {},
       },
     );
     assert.deepEqual(result.targets, []);
@@ -79,6 +79,29 @@ test('login waits for the website to finish creating its search credential', asy
         'fabricated-delayed',
       );
     });
+  }));
+
+test('default search returns browser risk rejection without HTTP fallback or another search', async (t) =>
+  temporaryHome(async (home) => {
+    const fixture = bossFixture('seeker');
+    fixture.mockHttp(t);
+    const client = createRecruitmentClient({
+      home,
+      platforms: [createBossPlatform({ browser: fixture.browser })],
+    });
+    await client.login({ platform: 'boss' });
+    fixture.state.searchCode = 37;
+    await assert.rejects(
+      client.search({ platform: 'boss' }, { query: 'TypeScript', activeWithin: 'any' }),
+      (error: unknown) => {
+        assert.ok(error instanceof RecruitmentError);
+        assert.equal(error.details?.reason, 'environment-rejected');
+        return true;
+      },
+    );
+    assert.equal(fixture.state.searchReads, 1);
+    assert.equal(fixture.state.httpSearchReads, 0);
+    assert.equal(fixture.state.sends, 0);
   }));
 
 test('a verification page is not treated as a search-ready session', async () => {
@@ -123,7 +146,13 @@ test('an incomplete saved search session is refreshed through its normal browser
     });
     const result = await client.search(
       { platform: 'boss' },
-      { query: 'TypeScript', activeWithin: 'any', maxPages: 1, limit: 1 },
+      {
+        query: 'TypeScript',
+        activeWithin: 'any',
+        maxPages: 1,
+        limit: 1,
+        options: { transport: 'http' },
+      },
     );
     assert.equal(result.targets[0].title, 'TypeScript 工程师');
     assert.equal(browserVisits, 2);
@@ -240,6 +269,7 @@ test('normal login saves a local HTTP session; subsequent job search opens no br
         activeWithin: 'any',
         maxPages: 1,
         limit: 1,
+        options: { transport: 'http' },
       },
     );
     assert.equal(result.targets[0].title, '前端工程师');
@@ -295,7 +325,10 @@ test('HTTP search stops at rejected identity without retrying, searching, or ope
         }) as unknown as APIRequestContext,
     );
     await assert.rejects(
-      client.search({ platform: 'boss' }, { query: '前端', activeWithin: 'any' }),
+      client.search(
+        { platform: 'boss' },
+        { query: '前端', activeWithin: 'any', options: { transport: 'http' } },
+      ),
       (error: unknown) => {
         assert.ok(error instanceof RecruitmentError);
         assert.equal(error.details?.endpoint, '/wapi/zpuser/wap/getUserInfo.json');
