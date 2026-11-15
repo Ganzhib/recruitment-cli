@@ -49,10 +49,10 @@
 
 ## npm 安装与本地 AI Demo
 
-最新构建通过 [GitHub Releases](https://github.com/Ganzhib/recruitment-cli/releases/latest) 分发。需要 Node.js ≥ 22.16；安装 v0.1.2 并打开本地 Demo：
+最新构建通过 [GitHub Releases](https://github.com/Ganzhib/recruitment-cli/releases/latest) 分发。需要 Node.js ≥ 22.16；安装 v0.1.3 并打开本地 Demo：
 
 ```bash
-npm install -g https://github.com/Ganzhib/recruitment-cli/releases/download/v0.1.2/ganzhibin-recruitment-cli-0.1.2.tgz
+npm install -g https://github.com/Ganzhib/recruitment-cli/releases/download/v0.1.3/ganzhibin-recruitment-cli-0.1.3.tgz
 recruit --version
 recruit demo
 ```

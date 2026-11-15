@@ -69,7 +69,7 @@ recruit greet "前端" --platform boss --active-within 7d --dry-run
 
 最小只读搜索可运行 `recruit --json search "前端" --platform boss --city 上海 --active-within any --max-pages 1 -n 1`。`any` 不要求逐个读取岗位详情，适合先确认查询是否正常。环境异常、请求频繁、会话失效或验证要求会停止本次请求，不会自动重试或切换通道；请按提示在登录窗口完成验证。离线测试通过不代表当前账号已通过 BOSS 实站验证。
 
-确实需要原有 HTTP 列表通道时，通过平台参数 `--options '{"transport":"http"}'` 显式选择。网页模式也可显式传入 `{"transport":"browser"}`。这两种模式都不能保证解除平台风控，不生成验证凭证，也不自动处理验证码。
+确实需要原有 HTTP 列表通道时，将 `{"transport":"http"}` 保存到 `boss-http.json`，通过 `--options boss-http.json` 显式选择。`--options` 接受 JSON 文件路径；网页模式也可在文件中指定 `{"transport":"browser"}`。这两种模式都不能保证解除平台风控，不生成验证凭证，也不自动处理验证码。
 
 招聘者先用 `recruit positions --platform boss` 确认岗位，再通过 `--options` 指定岗位 ID 或完整名称。确认计划后可使用 `recruit plan run <plan-id>`；实际发送与未确认结果都会保留记录。
 
