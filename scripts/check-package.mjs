@@ -96,6 +96,7 @@ try {
     [
       join(directory, 'node_modules/@ganzhibin/recruitment-cli/dist/recruit.js'),
       'demo',
+      '--no-open',
       '--port',
       String(port),
     ],
